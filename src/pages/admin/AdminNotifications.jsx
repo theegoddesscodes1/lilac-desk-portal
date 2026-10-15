@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase } from '../../supabaseClient';
 import { Link } from 'react-router-dom';
 import { ago, firstName, useAdmin } from '../../lib/portalData';
 import { Avatar } from '../../components/Bits';
@@ -72,7 +73,7 @@ export default function AdminNotifications({ seenAt, onSeen }) {
   const feed = useMemo(() => buildFeed(data), [data]);
 
   // Mark everything seen when leaving the page, so new items stay highlighted while you look
-  useEffect(() => () => onSeen(Date.now()), [onSeen]);
+  useEffect(() => () => onSeen(), [onSeen]);
 
   if (data.loading) return <p className="muted page-pad">Loading</p>;
 
@@ -120,3 +121,47 @@ export default function AdminNotifications({ seenAt, onSeen }) {
 }
 
 export { writeSeen };
+
+// "Seen up to" time, shared by all your devices through Supabase.
+// Falls back to this device only if the studio_state table isn't set up.
+export function useSeenAt() {
+  const [seenAt, setSeenAt] = useState(() => readSeen() || Date.now());
+
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      supabase
+        .from('studio_state')
+        .select('notifications_seen_at')
+        .eq('id', 1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (alive && data?.notifications_seen_at) setSeenAt(new Date(data.notifications_seen_at).getTime());
+        });
+    load();
+    const onShow = () => document.visibilityState === 'visible' && load();
+    document.addEventListener('visibilitychange', onShow);
+    const channel = supabase
+      .channel('studio-state')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'studio_state' }, (payload) => {
+        const t = payload.new?.notifications_seen_at;
+        if (t) setSeenAt(new Date(t).getTime());
+      })
+      .subscribe();
+    return () => {
+      alive = false;
+      document.removeEventListener('visibilitychange', onShow);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const markSeen = useCallback(async () => {
+    const now = Date.now();
+    setSeenAt(now);
+    writeSeen(now);
+    const { data, error } = await supabase.rpc('mark_notifications_seen');
+    if (!error && data) setSeenAt(new Date(data).getTime());
+  }, []);
+
+  return [seenAt, markSeen];
+}

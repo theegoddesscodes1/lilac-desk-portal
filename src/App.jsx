@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useMatch } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { SHOP_URL } from './portal-config';
@@ -13,24 +13,14 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrder from './pages/admin/AdminOrder';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminIncome from './pages/admin/AdminIncome';
-import AdminNotifications, { buildFeed, readSeen, writeSeen } from './pages/admin/AdminNotifications';
+import AdminNotifications, { buildFeed, useSeenAt } from './pages/admin/AdminNotifications';
 import { AdminCustomer, AdminCustomerList } from './pages/admin/AdminCustomers';
 import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerProofs, CustomerRoot } from './pages/customer/CustomerPages';
 
 function AdminApp({ email }) {
   const data = useAdmin();
   const { activeCount, unreadThreads } = data;
-  const [seenAt, setSeenAt] = useState(() => {
-    const t = readSeen();
-    if (t) return t;
-    const now = Date.now();
-    writeSeen(now);
-    return now;
-  });
-  const markSeen = useCallback((t) => {
-    writeSeen(t);
-    setSeenAt(t);
-  }, []);
+  const [seenAt, markSeen] = useSeenAt();
   const newCount = useMemo(() => (data.loading ? 0 : buildFeed(data).filter((i) => new Date(i.at).getTime() > seenAt).length), [data, seenAt]);
   const bell = (
     <Link to="/notifications" className="ptop-icon bell" aria-label={newCount ? `Notifications, ${newCount} new` : 'Notifications'}>
