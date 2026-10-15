@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { ALL_STAGES, stageInfo } from '../portal-config';
-import { errorText, notify, uploadOrderFile } from '../lib/orderApi';
+import { errorText, nextRoundNumber, notify, refreshAll, uploadOrderFile } from '../lib/orderApi';
+import Icon from './Icons';
+
+// A real tick box: tap to tick, tap again to untick
+export function Check({ checked, onChange, children }) {
+  return (
+    <label className="qcheck qcheck--ctl">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className="qcheck-box"><Icon name="check" size={13} /></span>
+      <span>{children}</span>
+    </label>
+  );
+}
 
 function toLocalInput(value) {
   if (!value) return '';
@@ -31,6 +43,7 @@ export function StageControl({ order }) {
         body: `Stage updated: ${stageInfo(stage).label}.`,
       });
       if (tell) notify(order.id, stage === 'delivered' ? 'final_ready' : stage === 'proof_ready' ? 'proof_ready' : 'stage');
+      refreshAll();
     }
     setBusy(false);
     if (updateError) setError(errorText(updateError));
@@ -49,10 +62,7 @@ export function StageControl({ order }) {
           Update stage
         </button>
       </div>
-      <label className="check">
-        <input type="checkbox" checked={tell} onChange={(e) => setTell(e.target.checked)} />
-        Email the customer about this update
-      </label>
+      <Check checked={tell} onChange={setTell}>Email the customer about this update</Check>
       {error && <p className="error">{error}</p>}
     </div>
   );
@@ -81,6 +91,7 @@ export function DueAndRevisions({ order }) {
       })
       .eq('id', order.id);
     setMsg(error ? errorText(error) : 'Saved.');
+    if (!error) refreshAll();
   }
 
   return (
@@ -105,7 +116,7 @@ export function DueAndRevisions({ order }) {
   );
 }
 
-export function Uploader({ order, defaultKind = 'proof' }) {
+export function Uploader({ order, files: existing = [], defaultKind = 'proof', onDone }) {
   const [kind, setKind] = useState(defaultKind);
   const [watermark, setWatermark] = useState(true);
   const [advance, setAdvance] = useState(true);
@@ -123,6 +134,8 @@ export function Uploader({ order, defaultKind = 'proof' }) {
     event.preventDefault();
     if (!files.length) return;
     setError('');
+    // Everything uploaded together is one proof round
+    const round = kind === 'proof' ? nextRoundNumber(existing) : null;
     try {
       for (const original of files) {
         let file = original;
@@ -136,7 +149,7 @@ export function Uploader({ order, defaultKind = 'proof' }) {
           file = result.file;
         }
         setBusy(`Uploading ${file.name}`);
-        await uploadOrderFile(order.id, kind, file, 'admin');
+        await uploadOrderFile(order.id, kind, file, 'admin', round);
       }
 
       if (advance && kind === 'proof') {
@@ -154,6 +167,8 @@ export function Uploader({ order, defaultKind = 'proof' }) {
       }
       setFiles([]);
       event.target.reset();
+      refreshAll();
+      onDone?.();
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -176,20 +191,17 @@ export function Uploader({ order, defaultKind = 'proof' }) {
         </label>
       </div>
       {kind === 'proof' && (
-        <label className="check">
-          <input type="checkbox" checked={watermark} onChange={(e) => setWatermark(e.target.checked)} />
-          Add the proof watermark before uploading
-        </label>
+        <Check checked={watermark} onChange={setWatermark}>Add the proof watermark before uploading</Check>
       )}
       {kind !== 'source' && (
-        <label className="check">
-          <input type="checkbox" checked={advance} onChange={(e) => setAdvance(e.target.checked)} />
-          {kind === 'proof' ? 'Set stage to Proof ready and email the customer' : 'Set stage to Delivered and email the customer'}
-        </label>
+        <Check checked={advance} onChange={setAdvance}>
+          {kind === 'proof' ? 'Set stage to Proof ready and notify the customer' : 'Set stage to Delivered and notify the customer'}
+        </Check>
       )}
       {kind !== 'proof' && (
         <p className="field-help">Final and source files stay hidden from the customer until the stage is Delivered.</p>
       )}
+      {kind === 'proof' && <p className="field-help">Everything you choose here goes out together as proof {nextRoundNumber(existing)}.</p>}
       <button type="submit" className="btn" disabled={!files.length || Boolean(busy)}>
         {busy || 'Upload'}
       </button>

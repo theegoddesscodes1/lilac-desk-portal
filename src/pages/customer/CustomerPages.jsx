@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { DESIGNER_NAME, FIX_WINDOW_DAYS, REVIEW_URL, plannerLabel } from '../../portal-config';
-import { errorText, formatDate, formatSize, notify, openFile, useOrderData } from '../../lib/orderApi';
+import { errorText, formatDate, formatSize, notify, openFile, proofRounds, refreshAll, useOrderData } from '../../lib/orderApi';
+import ProofViewer from '../../components/ProofViewer';
+import { FileChip, ImageGrid, isImage } from '../../components/FilePreview';
+import { RoundFiles, RoundList } from '../../components/ProofRounds';
 import { isActive, isDone, shortDate, useCustomer } from '../../lib/portalData';
 import { DeliveryLine, ProgressDots, ProgressHead } from '../../components/Bits';
 import BriefForm from '../../components/BriefForm';
@@ -75,7 +78,7 @@ export function CustomerHome() {
 
   const base = `/orders/${order.id}`;
   const proofs = files.filter((f) => f.kind === 'proof');
-  const step = nextStep(order, proofs.length, base);
+  const step = nextStep(order, proofRounds(files).length, base);
   const lastFromKerry = [...messages].reverse().find((m) => m.sender === 'admin');
   const others = orders.filter((o) => o.id !== order.id);
   const otherActive = others.filter(isActive);
@@ -171,26 +174,33 @@ export function CustomerBrief() {
 // ---------- Proofs ----------
 
 export function CustomerProofs() {
-  const { loading, error, order, files } = useOrder();
+  const { loading, error, order, files, messages, reload } = useOrder();
   const [notes, setNotes] = useState('');
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [viewing, setViewing] = useState(false);
   if (loading || error) return <Loading error={error} />;
 
-  const proofs = files.filter((f) => f.kind === 'proof');
-  const [latest, ...earlier] = proofs;
+  const rounds = proofRounds(files, messages);
+  const [latest, ...earlier] = rounds;
   const waiting = order.stage === 'proof_ready';
+  const approved = latest && (latest.verdict?.kind === 'approval' || (!waiting && ['approved', 'delivered', 'complete'].includes(order.stage)));
+  const changes = latest?.verdict?.kind === 'revision_request';
   const roundsLeft = order.revisions_included - order.revisions_used;
 
   async function approve() {
-    if (!window.confirm('Approve this proof? Your final files will be prepared from it. Check dates and spelling first.')) return;
+    if (!window.confirm(`Approve proof ${latest.number}? Your final files will be prepared from it. Check dates and spelling first.`)) return;
     setBusy(true);
     setErr('');
     const { error: rpcError } = await supabase.rpc('approve_proof', { p_order: order.id });
     setBusy(false);
     if (rpcError) setErr(errorText(rpcError));
-    else notify(order.id, 'approved');
+    else {
+      notify(order.id, 'approved');
+      reload();
+      refreshAll();
+    }
   }
 
   async function requestChanges(event) {
@@ -204,6 +214,8 @@ export function CustomerProofs() {
       setNotes('');
       setAsking(false);
       notify(order.id, 'revision_request');
+      reload();
+      refreshAll();
     }
   }
 
@@ -220,25 +232,36 @@ export function CustomerProofs() {
           <p className="muted small">You’ll get a notification as soon as it’s ready.</p>
         </div>
       ) : (
-        <div className="proof-card">
+        <div className={`proof-card${approved ? ' proof-card--approved' : ''}`}>
           <div className="kv">
-            <span className="label ox">{waiting ? 'New · ' : ''}Proof {proofs.length}</span>
-            <span className="muted small">{formatDate(latest.created_at, true)}</span>
+            <span className="label ox">{waiting ? 'New · ' : ''}Proof {latest.number}</span>
+            <span className="muted small">{formatDate(latest.at, true)}</span>
           </div>
-          <button type="button" className="proof-file" onClick={() => openFile(latest)}>
+
+          {approved && (
+            <p className="proof-status proof-status--ok">
+              <Icon name="check" size={16} /> You approved this proof{latest.verdict ? ` on ${formatDate(latest.verdict.at)}` : ''}. Your final files are being prepared.
+            </p>
+          )}
+          {changes && (
+            <p className="proof-status">You asked for changes on {formatDate(latest.verdict.at)}. Your next proof will show up here.</p>
+          )}
+
+          <button type="button" className="proof-open" onClick={() => setViewing(true)}>
             <span className="proof-thumb" aria-hidden="true">PROOF</span>
             <span>
-              <span className="proof-name">{latest.name}</span>
-              <span className="muted small">{formatSize(latest.size)} · watermarked</span>
-              <span className="small"><u>Open proof</u></span>
+              <span className="proof-name">See proof {latest.number}</span>
+              <span className="muted small">{latest.files.length} {latest.files.length === 1 ? 'file' : 'files'} · watermarked</span>
             </span>
+            <Icon name="back" size={16} className="proof-arrow" />
           </button>
+          <RoundFiles round={latest} />
 
           {waiting && !asking && (
             <>
               <div className="btn-pair">
-                <button type="button" className="btn btn--ox btn--lg" onClick={approve} disabled={busy}>Approve</button>
-                <button type="button" className="btn btn--ghost btn--lg" onClick={() => setAsking(true)} disabled={busy || roundsLeft <= 0}>
+                <button type="button" className="btn btn--ox" onClick={approve} disabled={busy}>Approve</button>
+                <button type="button" className="btn btn--ghost" onClick={() => setAsking(true)} disabled={busy || roundsLeft <= 0}>
                   Request changes
                 </button>
               </div>
@@ -256,24 +279,20 @@ export function CustomerProofs() {
               <p className="field-help">Send it all in one list. Mistakes on my end don’t use a round; message me about those.</p>
               <textarea id="revision-notes" rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} />
               <div className="btn-pair">
-                <button type="submit" className="btn btn--ox btn--lg" disabled={busy || !notes.trim()}>Send changes</button>
-                <button type="button" className="btn btn--ghost btn--lg" onClick={() => setAsking(false)}>Cancel</button>
+                <button type="submit" className="btn btn--ox" disabled={busy || !notes.trim()}>Send changes</button>
+                <button type="button" className="btn btn--ghost" onClick={() => setAsking(false)}>Cancel</button>
               </div>
             </form>
           )}
           {err && <p className="error">{err}</p>}
+          {viewing && <ProofViewer files={latest.files} title={`Proof ${latest.number}`} onClose={() => setViewing(false)} />}
         </div>
       )}
 
       {earlier.length > 0 && (
-        <div className="home-list section-gap">
-          <p className="label muted">Earlier</p>
-          {earlier.map((p, i) => (
-            <button key={p.id} type="button" className="mini-row" onClick={() => openFile(p)}>
-              <span>Proof {earlier.length - i}<small>{shortDate(p.created_at)}</small></span>
-              <span className="small"><u>Open</u></span>
-            </button>
-          ))}
+        <div className="section-gap">
+          <p className="label muted">Earlier proofs</p>
+          <RoundList rounds={earlier} />
         </div>
       )}
     </main>
@@ -310,12 +329,15 @@ const APP_TIPS = {
 };
 
 export function CustomerFiles() {
-  const { loading, error, order, files, orderAddons } = useOrder();
+  const { loading, error, order, files, messages, orderAddons } = useOrder();
   if (loading || error) return <Loading error={error} />;
 
   const released = isDone(order);
   const finals = files.filter((f) => f.kind === 'final' || f.kind === 'source');
   const shared = files.filter((f) => f.uploaded_by === 'customer');
+  const sharedImages = shared.filter(isImage);
+  const sharedOther = shared.filter((f) => !isImage(f));
+  const rounds = proofRounds(files, messages);
   const fixUntil = order.delivered_at ? new Date(new Date(order.delivered_at).getTime() + FIX_WINDOW_DAYS * 86400000) : null;
   const app = order.brief?.app;
 
@@ -360,15 +382,22 @@ export function CustomerFiles() {
         </>
       )}
 
+      {rounds.length > 0 && (
+        <>
+          <p className="label muted section-gap">Proofs</p>
+          <RoundList rounds={rounds} />
+        </>
+      )}
+
       {shared.length > 0 && (
         <>
           <p className="label muted section-gap">Files you’ve shared</p>
-          {shared.map((f) => (
-            <button key={f.id} type="button" className="mini-row" onClick={() => openFile(f)}>
-              <span>{f.name}<small>{f.kind === 'brief' ? 'Brief' : 'Message'} · {shortDate(f.created_at)}</small></span>
-              <span className="small"><u>View</u></span>
-            </button>
-          ))}
+          {sharedImages.length > 0 && <ImageGrid files={sharedImages} />}
+          {sharedOther.length > 0 && (
+            <div className="chip-list">
+              {sharedOther.map((f) => <FileChip key={f.id} file={f} />)}
+            </div>
+          )}
         </>
       )}
     </main>

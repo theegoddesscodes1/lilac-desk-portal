@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { openFile } from '../lib/orderApi';
+import { canPreview, isImage, openFile } from '../lib/orderApi';
+import ProofViewer from './ProofViewer';
 import Icon from './Icons';
 
 const BUCKET = 'order-files';
-const IMAGE = /\.(png|jpe?g|gif|webp|heic|avif|svg)$/i;
-
-export const isImage = (file) => IMAGE.test(file?.name || file?.path || '');
+export { isImage };
 
 // Short-lived view links (no forced download) for a list of stored files
 export function useViewUrls(files) {
@@ -86,18 +85,18 @@ export function ImageGrid({ files, onRemove }) {
   );
 }
 
-// One file: images open in the viewer, everything else downloads
+// One file: images and PDFs open in the viewer (with Download there), anything else downloads
 export function FileChip({ file }) {
   const urls = useViewUrls([file]);
   const [open, setOpen] = useState(false);
-  const image = isImage(file) && urls[file.path];
+  const thumb = isImage(file) ? urls[file.path] : null;
   return (
     <>
-      <button type="button" className="file-chip" onClick={() => (image ? setOpen(true) : openFile(file))}>
-        {image ? <img src={urls[file.path]} alt="" /> : <Icon name="files" size={14} />}
+      <button type="button" className="file-chip" onClick={() => (canPreview(file) ? setOpen(true) : openFile(file))}>
+        {thumb ? <img src={thumb} alt="" /> : <Icon name="files" size={14} />}
         <span>{file.name}</span>
       </button>
-      {open && <Lightbox file={file} url={urls[file.path]} onClose={() => setOpen(false)} />}
+      {open && <ProofViewer files={[file]} onClose={() => setOpen(false)} />}
     </>
   );
 }

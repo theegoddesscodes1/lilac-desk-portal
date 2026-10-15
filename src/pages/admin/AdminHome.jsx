@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { TIERS, LICENSES } from '../../portal-config';
-import { daysUntil, firstName, isActive, isDone, money, useAdmin } from '../../lib/portalData';
+import { approvedProofNumber, daysUntil, firstName, isActive, isDone, money, useAdmin } from '../../lib/portalData';
 import { StageDot } from '../../components/Bits';
 
 const NEEDS_YOU = ['revisions', 'approved', 'brief_received', 'designing'];
@@ -34,7 +34,10 @@ function upNext(order, messagesByOrder) {
       text: `${shortPlanner(order)}, round ${order.revisions_used} of ${order.revisions_included}, ${dueText(order)}.`,
     };
   }
-  if (order.stage === 'approved') return { title: `${name} approved the proof on ${num}.`, text: 'Final files are next.' };
+  if (order.stage === 'approved') {
+    const n = approvedProofNumber(messagesByOrder[order.id]);
+    return { title: `${name} approved ${n ? `proof ${n}` : 'the proof'} on ${num}.`, text: 'Final files are next.' };
+  }
   if (order.stage === 'brief_received') return { title: `${name}’s brief is in for ${num}.`, text: `Time to start designing. ${dueText(order).replace(/^./, (c) => c.toUpperCase())}.` };
   return { title: `${num} for ${name} is ${dueText(order)}.`, text: `${shortPlanner(order)} planner, currently designing.` };
 }

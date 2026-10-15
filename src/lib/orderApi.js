@@ -3,22 +3,27 @@ import { supabase } from '../supabaseClient';
 
 const BUCKET = 'order-files';
 
+export const isImage = (file) => /\.(png|jpe?g|gif|webp|heic|avif|svg)$/i.test(file?.name || file?.path || '');
+export const isPdf = (file) => /\.pdf$/i.test(file?.name || file?.path || '');
+export const canPreview = (file) => isImage(file) || isPdf(file);
+
 export function safeFileName(name) {
   return name.replace(/[^\w.\-]+/g, '-').replace(/-+/g, '-').slice(-120);
 }
 
-export async function uploadOrderFile(orderId, kind, file, uploadedBy) {
+export async function uploadOrderFile(orderId, kind, file, uploadedBy, round = null) {
   const path = `${orderId}/${kind}/${Date.now()}-${safeFileName(file.name)}`;
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
   if (uploadError) throw uploadError;
 
-  const { data, error } = await supabase
-    .from('files')
-    .insert({ order_id: orderId, kind, path, name: file.name, size: file.size, uploaded_by: uploadedBy })
-    .select()
-    .single();
+  const row = { order_id: orderId, kind, path, name: file.name, size: file.size, uploaded_by: uploadedBy };
+  let { data, error } = await supabase.from('files').insert(round ? { ...row, round } : row).select().single();
+  // Before the proof-rounds update is run in Supabase, save without the round
+  if (error && round && /round/i.test(error.message)) {
+    ({ data, error } = await supabase.from('files').insert(row).select().single());
+  }
   if (error) throw error;
   return data;
 }
@@ -62,12 +67,57 @@ export function keepFresh(reload) {
   window.addEventListener('focus', run);
   window.addEventListener('online', run);
   const timer = setInterval(() => document.visibilityState === 'visible' && run(), 60000);
+  const now = () => reload();
+  window.addEventListener('portal-refresh', now);
   return () => {
+    window.removeEventListener('portal-refresh', now);
     document.removeEventListener('visibilitychange', onVisible);
     window.removeEventListener('focus', run);
     window.removeEventListener('online', run);
     clearInterval(timer);
   };
+}
+
+// After any change made here (send, read, approve, upload), refresh every screen right away
+export function refreshAll() {
+  window.dispatchEvent(new Event('portal-refresh'));
+}
+
+// Proof files grouped into rounds. Files uploaded together share a round number;
+// older files without one are grouped when uploaded within 15 minutes of each other.
+export function proofRounds(files, messages = []) {
+  const proofs = files.filter((f) => f.kind === 'proof').sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const rounds = [];
+  for (const f of proofs) {
+    const last = rounds[rounds.length - 1];
+    const gap = last ? new Date(f.created_at) - new Date(last.files[last.files.length - 1].created_at) : Infinity;
+    const same = last && (f.round != null ? last.round === f.round : last.legacy && gap < 15 * 60000);
+    if (same) {
+      last.files.push(f);
+    } else {
+      const number = f.round ?? (last ? last.number + 1 : 1);
+      rounds.push({ round: f.round ?? null, legacy: f.round == null, number, files: [f], at: f.created_at });
+    }
+  }
+  // Mark the round each approval or change request was about
+  const verdicts = messages.filter((m) => m.kind === 'approval' || m.kind === 'revision_request');
+  for (const r of rounds) {
+    const next = rounds[rounds.indexOf(r) + 1];
+    const v = verdicts.find((m) => new Date(m.created_at) >= new Date(r.at) && (!next || new Date(m.created_at) < new Date(next.at)));
+    if (v) r.verdict = { kind: v.kind, at: v.created_at };
+  }
+  return rounds.reverse();
+}
+
+export function nextRoundNumber(files) {
+  const rounds = proofRounds(files);
+  return rounds.length ? rounds[0].number + 1 : 1;
+}
+
+export async function viewUrl(file) {
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(file.path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 // Reload once a channel (re)connects, so nothing sent while it was down is missed

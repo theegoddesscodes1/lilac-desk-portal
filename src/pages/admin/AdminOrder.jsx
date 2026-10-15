@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { NO_RESPONSE_DAYS, WAITING_ON_CUSTOMER, plannerLabel } from '../../portal-config';
-import { daysSince, formatDate, openFile, useOrderData } from '../../lib/orderApi';
-import { ago, money, orderTotal, shortDate, useAdmin } from '../../lib/portalData';
+import { daysSince, formatDate, proofRounds, useOrderData } from '../../lib/orderApi';
+import { RoundFiles, RoundList, verdictText } from '../../components/ProofRounds';
+import { ago, approvedProofNumber, money, orderTotal, shortDate, useAdmin } from '../../lib/portalData';
 import { Avatar, ProgressDots, StageDot } from '../../components/Bits';
 import BriefForm from '../../components/BriefForm';
 import FileList from '../../components/FileList';
@@ -17,7 +18,7 @@ const NEXT = {
   designing: () => 'Designing. Upload the first proof when it’s ready.',
   proof_ready: (n) => `Waiting on ${n} to review the latest proof.`,
   revisions: (n) => `${n} asked for changes. Make them and upload the next proof.`,
-  approved: (n) => `${n} approved the proof. Upload the final files.`,
+  approved: (n, p) => `${n} approved ${p ? `proof ${p}` : 'the proof'}. Upload the final files.`,
   delivered: () => 'Delivered. Mark it complete once the fix window is over.',
   complete: () => 'Complete.',
   closed: () => 'Closed.',
@@ -35,7 +36,9 @@ export default function AdminOrder() {
 
   const name = order.customer_name || order.customer_email;
   const first = name.split(' ')[0];
-  const proofs = files.filter((f) => f.kind === 'proof');
+  const rounds = proofRounds(files, messages);
+  const latest = rounds[0];
+  const approvedNo = approvedProofNumber(messages);
   const lastMsg = [...messages].reverse().find((m) => m.sender !== 'system');
   const theirs = orders.filter((o) => o.customer_email.toLowerCase() === order.customer_email.toLowerCase());
   const spent = theirs.reduce((n, o) => n + (o.id === order.id ? orderTotal(order, orderAddons) : totalFor(o)), 0);
@@ -82,22 +85,26 @@ export default function AdminOrder() {
             <div className="overview">
               <div>
                 <p className="label muted">Next step</p>
-                <p className="lead lead--it">{NEXT[order.stage]?.(first)}</p>
+                <p className="lead lead--it">{NEXT[order.stage]?.(first, approvedNo)}</p>
                 <div className="btn-row btn-row--three">
                   <button type="button" className={`btn btn--sm ${panel === 'proof' ? '' : 'btn--ox'}`} onClick={() => setPanel(panel === 'proof' ? '' : 'proof')}>Upload proof</button>
                   <button type="button" className="btn btn--sm btn--ghost" onClick={() => setPanel(panel === 'final' ? '' : 'final')}>Upload final</button>
                   <button type="button" className="btn btn--sm btn--ghost" onClick={() => setPanel(panel === 'stage' ? '' : 'stage')}>Change stage</button>
                 </div>
-                {panel === 'proof' && <div className="panel-box"><Uploader order={order} defaultKind="proof" key="proof" /></div>}
-                {panel === 'final' && <div className="panel-box"><Uploader order={order} defaultKind="final" key="final" /></div>}
+                {panel === 'proof' && <div className="panel-box"><Uploader order={order} files={files} defaultKind="proof" key="proof" onDone={() => setPanel('')} /></div>}
+                {panel === 'final' && <div className="panel-box"><Uploader order={order} files={files} defaultKind="final" key="final" onDone={() => setPanel('')} /></div>}
                 {panel === 'stage' && <div className="panel-box"><StageControl order={order} /><DueAndRevisions order={order} /></div>}
               </div>
               <div>
                 <p className="label muted">Latest proof</p>
-                {proofs[0] ? (
-                  <div className="mini-row">
-                    <span>{proofs[0].name}<small>{ago(proofs[0].created_at)} ago · proof {proofs.length}</small></span>
-                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => openFile(proofs[0])}>Open</button>
+                {latest ? (
+                  <div className="latest-round">
+                    <p className="latest-round-head">
+                      <span>Proof {latest.number}</span>
+                      <span className="muted small">{ago(latest.at)} ago · {latest.files.length} {latest.files.length === 1 ? 'file' : 'files'}</span>
+                      {latest.verdict && <span className={`ntag${latest.verdict.kind === 'approval' ? ' ntag--ok' : ' ntag--ox'}`}>{verdictText(latest)}</span>}
+                    </p>
+                    <RoundFiles round={latest} />
                   </div>
                 ) : <p className="muted small">No proofs yet.</p>}
                 <p className="label muted section-gap-sm">Last message</p>
@@ -114,7 +121,7 @@ export default function AdminOrder() {
           {tab === 'files' && (
             <div className="tab-body">
               <h3 className="h-sub">Proofs</h3>
-              <FileList files={byKind('proof')} empty="No proofs yet." />
+              {rounds.length ? <RoundList rounds={rounds} /> : <p className="muted">No proofs yet.</p>}
               <h3 className="h-sub">Final files</h3>
               <FileList files={byKind('final', 'source')} empty="No final files yet." />
               <h3 className="h-sub">From the customer</h3>

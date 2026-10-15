@@ -11,6 +11,15 @@ export function money(value) {
   return `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', whole ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// Which proof was approved: "Proof 2 approved." in the message, or count the change requests before it
+export function approvedProofNumber(messages = [], approval = null) {
+  const ap = approval || [...messages].reverse().find((m) => m.kind === 'approval');
+  if (!ap) return null;
+  const m = /Proof (\d+)/.exec(ap.body || '');
+  if (m) return Number(m[1]);
+  return messages.filter((x) => x.kind === 'revision_request' && new Date(x.created_at) < new Date(ap.created_at)).length + 1;
+}
+
 export function firstName(order) {
   const name = order?.customer_name || order?.customer_email || '';
   return name.includes('@') ? name.split('@')[0] : name.split(' ')[0];

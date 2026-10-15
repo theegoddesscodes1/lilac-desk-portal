@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Link } from 'react-router-dom';
-import { ago, firstName, useAdmin } from '../../lib/portalData';
+import { ago, approvedProofNumber, firstName, useAdmin } from '../../lib/portalData';
 import { Avatar } from '../../components/Bits';
 import Icon from '../../components/Icons';
 import { shortPlanner } from './AdminHome';
@@ -42,7 +42,10 @@ export function buildFeed({ orders, orderAddons, messages }) {
     if (!o || m.sender !== 'customer') continue;
     const base = { id: `m-${m.id}`, at: m.created_at, order: o, to: `/messages/${o.id}`, sub: m.body };
     if (m.kind === 'revision_request') items.push({ ...base, kind: 'changes', text: <>{who(o)} asked for changes on <b>{o.shopify_order_name}</b></> });
-    else if (m.kind === 'approval') items.push({ ...base, kind: 'approved', text: <>{who(o)} approved the proof for <b>{o.shopify_order_name}</b></> });
+    else if (m.kind === 'approval') {
+      const n = approvedProofNumber(messages.filter((x) => x.order_id === o.id), m);
+      items.push({ ...base, kind: 'approved', text: <>{who(o)} approved {n ? `proof ${n}` : 'the proof'} for <b>{o.shopify_order_name}</b></> });
+    }
     else items.push({ ...base, kind: 'message', text: <>{who(o)} sent a message</>, sub: m.body || 'Sent a file' });
   }
 

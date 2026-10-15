@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DESIGNER_NAME } from '../portal-config';
-import { errorText, formatDate, notify, openFile, uploadOrderFile } from '../lib/orderApi';
+import { errorText, formatDate, notify, refreshAll, uploadOrderFile } from '../lib/orderApi';
+import { FileChip } from './FilePreview';
 import Icon from './Icons';
 
 const KIND_LABELS = { revision_request: 'Changes requested', approval: 'Approved' };
@@ -31,7 +32,7 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
 
   // Opening the chat marks the other side's messages as read
   useEffect(() => {
-    if (unread) supabase.rpc('mark_read', { p_order: orderId });
+    if (unread) supabase.rpc('mark_read', { p_order: orderId }).then(() => refreshAll());
   }, [unread, orderId]);
 
   async function send(event) {
@@ -53,6 +54,7 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
       setAttachment(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       notify(orderId, 'message');
+      refreshAll();
       onSent?.();
     } catch (err) {
       setError(errorText(err));
@@ -79,11 +81,7 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
                 <span> · {formatDate(m.created_at, true)}</span>
               </p>
               {m.body && <p className="msg-body">{m.body}</p>}
-              {file && (
-                <button type="button" className="msg-file" onClick={() => openFile(file)}>
-                  {file.name}
-                </button>
-              )}
+              {file && <FileChip file={file} />}
             </div>
           );
         })}

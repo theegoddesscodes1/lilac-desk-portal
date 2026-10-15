@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { formatDate, formatSize, openFile } from '../lib/orderApi';
-import { Lightbox, isImage, useViewUrls } from './FilePreview';
+import { canPreview, formatDate, formatSize, isImage, openFile } from '../lib/orderApi';
+import { useViewUrls } from './FilePreview';
+import ProofViewer from './ProofViewer';
 
 // Images open in a viewer first; every file has its own Download button
 export default function FileList({ files, empty = 'No files yet.' }) {
@@ -21,7 +22,7 @@ export default function FileList({ files, empty = 'No files yet.' }) {
                 </button>
               ) : null}
               <div className="file-info">
-                {url ? (
+                {canPreview(file) ? (
                   <button type="button" className="file-name link-btn" onClick={() => setOpen(file)}>{file.name}</button>
                 ) : (
                   <p className="file-name">{file.name}</p>
@@ -38,7 +39,7 @@ export default function FileList({ files, empty = 'No files yet.' }) {
           );
         })}
       </ul>
-      {open && <Lightbox file={open} url={urls[open.path]} onClose={() => setOpen(null)} />}
+      {open && <ProofViewer files={[open]} onClose={() => setOpen(null)} />}
     </>
   );
 }
