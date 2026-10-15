@@ -121,38 +121,32 @@ export function Uploader({ order, files: existing = [], defaultKind = 'proof', o
   const [watermark, setWatermark] = useState(true);
   const [advance, setAdvance] = useState(true);
   const [files, setFiles] = useState([]);
-  const [busy, setBusy] = useState('');
+  const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
+  const round = nextRoundNumber(existing);
+  const isProof = kind === 'proof';
 
-  const kinds = [
-    { key: 'proof', label: 'Proof' },
-    { key: 'final', label: 'Final file' },
-    ...(order.license === 'commercial' ? [{ key: 'source', label: 'Keynote source file' }] : []),
-  ];
-
-  async function upload(event) {
-    event.preventDefault();
+  async function upload() {
     if (!files.length) return;
     setError('');
-    // Everything uploaded together is one proof round
-    const round = kind === 'proof' ? nextRoundNumber(existing) : null;
     try {
-      for (const original of files) {
-        let file = original;
-        if (kind === 'proof' && watermark) {
-          setBusy(`Watermarking ${original.name}`);
+      for (let i = 0; i < files.length; i += 1) {
+        let file = files[i];
+        if (isProof && watermark) {
+          setProgress({ step: 'Watermarking', n: i + 1 });
           const { watermarkProof } = await import('../lib/watermark');
-          const result = await watermarkProof(original);
+          const result = await watermarkProof(file);
           if (!result.watermarked) {
-            throw new Error(`${original.name} isn't a PDF or image, so it can't be watermarked. Untick watermarking to upload it as is.`);
+            throw new Error(`${file.name} isn't a PDF or image, so it can't be watermarked. Untick the watermark to upload it as is.`);
           }
           file = result.file;
         }
-        setBusy(`Uploading ${file.name}`);
-        await uploadOrderFile(order.id, kind, file, 'admin', round);
+        setProgress({ step: 'Uploading', n: i + 1 });
+        // Everything uploaded together is one proof round
+        await uploadOrderFile(order.id, kind, file, 'admin', isProof ? round : null);
       }
 
-      if (advance && kind === 'proof') {
+      if (advance && isProof) {
         await supabase.from('orders').update({ stage: 'proof_ready' }).eq('id', order.id);
         await supabase.from('messages').insert({ order_id: order.id, sender: 'system', body: 'A new proof is ready to review.' });
         notify(order.id, 'proof_ready');
@@ -166,47 +160,67 @@ export function Uploader({ order, files: existing = [], defaultKind = 'proof', o
         notify(order.id, 'final_ready');
       }
       setFiles([]);
-      event.target.reset();
       refreshAll();
       onDone?.();
     } catch (err) {
       setError(errorText(err));
     } finally {
-      setBusy('');
+      setProgress(null);
     }
   }
 
+  const busy = Boolean(progress);
+
   return (
-    <form className="control" onSubmit={upload}>
-      <label className="field-label" htmlFor="upload-kind">Upload</label>
-      <div className="control-row">
-        <select id="upload-kind" value={kind} onChange={(e) => setKind(e.target.value)}>
-          {kinds.map((k) => (
-            <option key={k.key} value={k.key}>{k.label}</option>
+    <div className="up">
+      {!isProof && order.license === 'commercial' && (
+        <div className="up-kinds">
+          {[['final', 'Final files'], ['source', 'Keynote source']].map(([k, label]) => (
+            <button key={k} type="button" className={`pill-opt${kind === k ? ' pill-opt--on' : ''}`} onClick={() => setKind(k)}>{label}</button>
           ))}
-        </select>
-        <label className="btn btn--ghost file-pick">
-          {files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} chosen` : 'Choose files'}
-          <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+        </div>
+      )}
+
+      {files.length > 0 && (
+        <ul className="up-list">
+          {files.map((f, i) => (
+            <li key={`${f.name}-${i}`}>
+              <span>{f.name}</span>
+              {!busy && (
+                <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`}>
+                  <Icon name="close" size={12} />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!busy && (
+        <label className="up-drop">
+          <Icon name="plus" size={16} />
+          <span>{files.length ? 'Add more files' : isProof ? `Choose files for proof ${round}` : 'Choose files'}</span>
+          <input type="file" multiple onChange={(e) => { setFiles([...files, ...Array.from(e.target.files ?? [])]); e.target.value = ''; }} />
         </label>
+      )}
+
+      <div className="up-opts">
+        {isProof && <Check checked={watermark} onChange={setWatermark}>Watermark</Check>}
+        {kind !== 'source' && <Check checked={advance} onChange={setAdvance}>{isProof ? 'Send to the customer now' : 'Mark delivered and notify'}</Check>}
       </div>
-      {kind === 'proof' && (
-        <Check checked={watermark} onChange={setWatermark}>Add the proof watermark before uploading</Check>
+      {!isProof && <p className="field-help">Final and source files stay hidden until the order is delivered.</p>}
+
+      {busy ? (
+        <div className="up-progress">
+          <span>{progress.step} {progress.n} of {files.length}…</span>
+          <i style={{ width: `${(progress.n / files.length) * 100}%` }} />
+        </div>
+      ) : (
+        <button type="button" className="btn btn--sm btn--ox up-go" disabled={!files.length} onClick={upload}>
+          {isProof ? `Send proof ${round}` : 'Upload'}{files.length ? ` · ${files.length} ${files.length === 1 ? 'file' : 'files'}` : ''}
+        </button>
       )}
-      {kind !== 'source' && (
-        <Check checked={advance} onChange={setAdvance}>
-          {kind === 'proof' ? 'Set stage to Proof ready and notify the customer' : 'Set stage to Delivered and notify the customer'}
-        </Check>
-      )}
-      {kind !== 'proof' && (
-        <p className="field-help">Final and source files stay hidden from the customer until the stage is Delivered.</p>
-      )}
-      {kind === 'proof' && <p className="field-help">Everything you choose here goes out together as proof {nextRoundNumber(existing)}.</p>}
-      <button type="submit" className="btn" disabled={!files.length || Boolean(busy)}>
-        {busy || 'Upload'}
-      </button>
       {error && <p className="error">{error}</p>}
-    </form>
+    </div>
   );
 }
-

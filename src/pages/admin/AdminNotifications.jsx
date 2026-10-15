@@ -25,6 +25,9 @@ function writeSeen(t) {
 }
 
 // Everything a customer did, newest first
+// New = after the last visit to this page, and (for messages) not already opened in the chat
+export const isNew = (item, seenAt) => new Date(item.at).getTime() > seenAt && !item.readAt;
+
 export function buildFeed({ orders, orderAddons, messages }) {
   const byId = Object.fromEntries(orders.map((o) => [o.id, o]));
   const who = (o) => firstName(o);
@@ -40,7 +43,7 @@ export function buildFeed({ orders, orderAddons, messages }) {
   for (const m of messages) {
     const o = byId[m.order_id];
     if (!o || m.sender !== 'customer') continue;
-    const base = { id: `m-${m.id}`, at: m.created_at, order: o, to: `/messages/${o.id}`, sub: m.body };
+    const base = { id: `m-${m.id}`, at: m.created_at, order: o, to: `/messages/${o.id}`, sub: m.body, readAt: m.read_at };
     if (m.kind === 'revision_request') items.push({ ...base, kind: 'changes', text: <>{who(o)} asked for changes on <b>{o.shopify_order_name}</b></> });
     else if (m.kind === 'approval') {
       const n = approvedProofNumber(messages.filter((x) => x.order_id === o.id), m);
@@ -104,7 +107,7 @@ export default function AdminNotifications({ seenAt, onSeen }) {
         <section key={g.label} className="nfeed">
           <p className="label muted">{g.label}</p>
           {g.items.map((item) => (
-            <Link key={item.id} to={item.to} className={`nrow${new Date(item.at).getTime() > seenAt ? ' nrow--new' : ''}`}>
+            <Link key={item.id} to={item.to} className={`nrow${isNew(item, seenAt) ? ' nrow--new' : ''}`}>
               <Avatar name={item.order.customer_name || item.order.customer_email} tone={item.kind === 'changes' ? 'avatar--ox' : ''} />
               <span className="nrow-body">
                 <span className="nrow-text">{item.text}</span>
@@ -114,7 +117,7 @@ export default function AdminNotifications({ seenAt, onSeen }) {
                   <span>{ago(item.at)} ago</span>
                 </span>
               </span>
-              {new Date(item.at).getTime() > seenAt && <span className="nav-dot" aria-label="New" />}
+              {isNew(item, seenAt) && <span className="nav-dot" aria-label="New" />}
             </Link>
           ))}
         </section>

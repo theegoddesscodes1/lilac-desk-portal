@@ -57,13 +57,13 @@ function buildSteps(order, rounds) {
 // Latest things that happened on this order, newest first
 function buildActivity(order, rounds, messages, orderAddons, first) {
   const items = [];
+  // Order events only; conversations live in the Messages tab
   for (const m of messages) {
-    if (m.sender === 'system') continue;
-    const who = m.sender === 'admin' ? 'You' : first;
-    if (m.kind === 'approval') items.push({ id: m.id, at: m.created_at, text: `${first} approved the proof`, to: 'chat', strong: true });
+    if (m.kind === 'approval') items.push({ id: m.id, at: m.created_at, text: `${first} approved ${approvedProofNumber(messages, m) ? `proof ${approvedProofNumber(messages, m)}` : 'the proof'}`, to: 'chat', strong: true });
     else if (m.kind === 'revision_request') items.push({ id: m.id, at: m.created_at, text: `${first} asked for changes`, sub: m.body, to: 'chat', strong: true });
-    else items.push({ id: m.id, at: m.created_at, text: `${who}: ${m.body || 'sent a file'}`, to: 'chat' });
   }
+  if (order.delivered_at) items.push({ id: 'delivered', at: order.delivered_at, text: 'Final files delivered', to: 'files' });
+  if (Number(order.refunded_amount) > 0 && order.refunded_at) items.push({ id: 'refund', at: order.refunded_at, text: `Refunded ${money(order.refunded_amount)}`, strong: true });
   for (const r of rounds) items.push({ id: `r${r.number}`, at: r.at, text: `You sent proof ${r.number}`, sub: `${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}`, round: r });
   if (order.brief_submitted_at) items.push({ id: 'brief', at: order.brief_submitted_at, text: `${first} submitted the brief`, to: 'brief' });
   for (const a of orderAddons) {
@@ -208,7 +208,7 @@ export default function AdminOrder() {
 
               <div className="ov-head">
                 <p className="label muted">Latest updates</p>
-                <Link to={`/messages/${order.id}`} className="small"><u>Open chat</u></Link>
+
               </div>
               <ul className="log">
                 {shownActivity.map((item) => {

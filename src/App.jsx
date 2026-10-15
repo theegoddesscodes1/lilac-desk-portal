@@ -13,7 +13,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrder from './pages/admin/AdminOrder';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminIncome from './pages/admin/AdminIncome';
-import AdminNotifications, { buildFeed, useSeenAt } from './pages/admin/AdminNotifications';
+import AdminNotifications, { buildFeed, isNew, useSeenAt } from './pages/admin/AdminNotifications';
 import { AdminCustomer, AdminCustomerList } from './pages/admin/AdminCustomers';
 import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerProofs, CustomerRoot } from './pages/customer/CustomerPages';
 
@@ -24,7 +24,7 @@ function AdminApp({ email }) {
   const data = useAdmin();
   const { activeCount, unreadThreads } = data;
   const [seenAt, markSeen] = useSeenAt();
-  const newCount = useMemo(() => (data.loading ? 0 : buildFeed(data).filter((i) => new Date(i.at).getTime() > seenAt).length), [data, seenAt]);
+  const newCount = useMemo(() => (data.loading ? 0 : buildFeed(data).filter((i) => isNew(i, seenAt)).length), [data, seenAt]);
   const bell = (
     <Link to="/notifications" className="ptop-icon bell" aria-label={newCount ? `Notifications, ${newCount} new` : 'Notifications'}>
       <Icon name="bell" />

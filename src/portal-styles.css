@@ -831,3 +831,23 @@ button.log-row:hover .log-text > span { color: var(--oxblood); }
   .show-phone-block { display: block; margin-top: 26px; }
   .ocust { margin: 0 0 18px; padding: 10px 12px; }
 }
+
+/* Upload box */
+.up { display: grid; gap: 10px; padding: 12px 0; }
+.up-kinds { display: flex; gap: 8px; flex-wrap: wrap; }
+.up-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid #EEECE8; }
+.up-list li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #EEECE8; font-size: 13px; }
+.up-list li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up-list li button { background: none; border: 0; padding: 4px; color: #8a867f; cursor: pointer; display: flex; }
+.up-list li button:hover { color: var(--oxblood); }
+.up-drop { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px dashed #b9b4ac; font-size: 13px; color: #5e5a55; cursor: pointer; }
+.up-drop:hover { border-color: var(--oxblood); color: var(--oxblood); }
+.up-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.up-opts { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.up-opts .qcheck--ctl { margin-top: 0; font-size: 13.5px; }
+.up .field-help { margin: 0; }
+.up-go { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.up-progress { position: relative; height: 34px; border: 1px solid var(--greige); background: #fff; font-size: 12.5px; display: flex; align-items: center; padding: 0 12px; overflow: hidden; }
+.up-progress span { position: relative; z-index: 1; }
+.up-progress i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--lilac); transition: width 0.3s; }
+.step .panel-box { padding: 2px 14px; }
