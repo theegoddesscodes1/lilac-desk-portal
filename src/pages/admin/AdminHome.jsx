@@ -109,8 +109,8 @@ export default function AdminHome() {
           <p className="lead">{next.text}</p>
           {needs[0] && (
             <div className="btn-row">
-              <Link to={`/orders/${needs[0].id}`} className="btn btn--ox btn--lg">Open order</Link>
-              <Link to={`/messages/${needs[0].id}`} className="btn btn--ghost btn--lg">Reply</Link>
+              <Link to={`/orders/${needs[0].id}`} className="btn btn--ox btn--sm">Open order</Link>
+              <Link to={`/messages/${needs[0].id}`} className="btn btn--ghost btn--sm">Reply</Link>
             </div>
           )}
 

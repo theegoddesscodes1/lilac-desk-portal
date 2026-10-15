@@ -3,9 +3,8 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { DESIGNER_NAME, FIX_WINDOW_DAYS, REVIEW_URL, plannerLabel } from '../../portal-config';
 import { errorText, formatDate, formatSize, notify, openFile, proofRounds, refreshAll, useOrderData } from '../../lib/orderApi';
-import ProofViewer from '../../components/ProofViewer';
 import { FileChip, ImageGrid, isImage } from '../../components/FilePreview';
-import { RoundFiles, RoundList } from '../../components/ProofRounds';
+import { RoundList } from '../../components/ProofRounds';
 import { isActive, isDone, shortDate, useCustomer } from '../../lib/portalData';
 import { DeliveryLine, ProgressDots, ProgressHead } from '../../components/Bits';
 import BriefForm from '../../components/BriefForm';
@@ -185,7 +184,6 @@ export function CustomerProofs() {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const [viewing, setViewing] = useState(false);
   if (loading || error) return <Loading error={error} />;
 
   const rounds = proofRounds(files, messages);
@@ -238,68 +236,47 @@ export function CustomerProofs() {
           <p className="muted small">You’ll get a notification as soon as it’s ready.</p>
         </div>
       ) : (
-        <div className={`proof-card${approved ? ' proof-card--approved' : ''}`}>
-          <div className="kv">
-            <span className="label ox">{waiting ? 'New · ' : ''}Proof {latest.number}</span>
-            <span className="muted small">{formatDate(latest.at, true)}</span>
-          </div>
+        <>
+          {waiting && (
+            <div className="proof-ask">
+              <p className="label ox">Waiting for you</p>
+              <p className="proof-ask-title">Proof {latest.number} is ready to review.</p>
+              <p className="muted small">Open it, check dates and spelling, then approve it or send one list of changes.</p>
+              {!asking ? (
+                <>
+                  <div className="btn-pair">
+                    <button type="button" className="btn btn--ox" onClick={approve} disabled={busy}>Approve</button>
+                    <button type="button" className="btn btn--ghost" onClick={() => setAsking(true)} disabled={busy || roundsLeft <= 0}>Request changes</button>
+                  </div>
+                  <p className="muted small proof-ask-note">
+                    {roundsLeft > 0
+                      ? `Changes use 1 of your ${roundsLeft} remaining ${roundsLeft === 1 ? 'round' : 'rounds'}.`
+                      : 'You’ve used all your revision rounds. Add an extra round from Home, or message me if something is a mistake on my end.'}
+                  </p>
+                </>
+              ) : (
+                <form onSubmit={requestChanges} className="ask">
+                  <label className="field-label" htmlFor="revision-notes">Everything you’d like changed</label>
+                  <p className="field-help">Send it all in one list. Mistakes on my end don’t use a round; message me about those.</p>
+                  <textarea id="revision-notes" rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                  <div className="btn-pair">
+                    <button type="submit" className="btn btn--ox" disabled={busy || !notes.trim()}>Send changes</button>
+                    <button type="button" className="btn btn--ghost" onClick={() => setAsking(false)}>Cancel</button>
+                  </div>
+                </form>
+              )}
+              {err && <p className="error">{err}</p>}
+            </div>
+          )}
 
           {approved && (
-            <p className="proof-status proof-status--ok">
-              <Icon name="check" size={16} /> You approved this proof{latest.verdict ? ` on ${formatDate(latest.verdict.at)}` : ''}. Your final files are being prepared.
-            </p>
+            <p className="proof-note"><Icon name="check" size={15} /> You approved proof {latest.number}{latest.verdict ? ` on ${formatDate(latest.verdict.at)}` : ''}. Your final files are being prepared.</p>
           )}
-          {changes && (
-            <p className="proof-status">You asked for changes on {formatDate(latest.verdict.at)}. Your next proof will show up here.</p>
-          )}
+          {changes && <p className="proof-note">You asked for changes on {formatDate(latest.verdict.at)}. Your next proof will show up here.</p>}
 
-          <button type="button" className="proof-open" onClick={() => setViewing(true)}>
-            <span className="proof-thumb" aria-hidden="true">PROOF</span>
-            <span>
-              <span className="proof-name">See proof {latest.number}</span>
-              <span className="muted small">{latest.files.length} {latest.files.length === 1 ? 'file' : 'files'} · watermarked</span>
-            </span>
-            <Icon name="back" size={16} className="proof-arrow" />
-          </button>
-          <RoundFiles round={latest} />
-
-          {waiting && !asking && (
-            <>
-              <div className="btn-pair">
-                <button type="button" className="btn btn--ox" onClick={approve} disabled={busy}>Approve</button>
-                <button type="button" className="btn btn--ghost" onClick={() => setAsking(true)} disabled={busy || roundsLeft <= 0}>
-                  Request changes
-                </button>
-              </div>
-              <p className="muted small">
-                {roundsLeft > 0
-                  ? `Approving starts your final files. Changes use 1 of your ${roundsLeft} remaining ${roundsLeft === 1 ? 'round' : 'rounds'}.`
-                  : 'You’ve used all your revision rounds. Add an extra round from Home, or message me if something is a mistake on my end.'}
-              </p>
-            </>
-          )}
-
-          {waiting && asking && (
-            <form onSubmit={requestChanges} className="ask">
-              <label className="field-label" htmlFor="revision-notes">Everything you’d like changed</label>
-              <p className="field-help">Send it all in one list. Mistakes on my end don’t use a round; message me about those.</p>
-              <textarea id="revision-notes" rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} />
-              <div className="btn-pair">
-                <button type="submit" className="btn btn--ox" disabled={busy || !notes.trim()}>Send changes</button>
-                <button type="button" className="btn btn--ghost" onClick={() => setAsking(false)}>Cancel</button>
-              </div>
-            </form>
-          )}
-          {err && <p className="error">{err}</p>}
-          {viewing && <ProofViewer files={latest.files} title={`Proof ${latest.number}`} onClose={() => setViewing(false)} />}
-        </div>
-      )}
-
-      {earlier.length > 0 && (
-        <div className="section-gap">
-          <p className="label muted">Earlier proofs</p>
-          <RoundList rounds={earlier} />
-        </div>
+          <p className="label muted section-gap-sm">All proofs</p>
+          <RoundList rounds={rounds} newest={waiting ? latest.number : null} />
+        </>
       )}
     </main>
   );

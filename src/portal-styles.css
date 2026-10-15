@@ -768,3 +768,66 @@ details[open] .summary { margin-bottom: 14px; }
 @media (hover: none) {
   .btn--ghost:hover:not(:disabled):not(.btn--active) { background: transparent; color: var(--charcoal); border-color: var(--charcoal); }
 }
+
+/* Customer proofs: one calm list, files only inside the viewer */
+.proof-ask { border: 1px solid var(--oxblood); background: #fff; padding: 16px 18px; margin-bottom: 22px; }
+.proof-ask-title { font-family: var(--serif); font-size: 19px; margin: 2px 0 4px; }
+.proof-ask .btn-pair { max-width: 360px; }
+.proof-ask-note { margin: 8px 0 0; }
+.proof-note { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--oxblood); margin: 0 0 18px; }
+.proof-note .icon { flex: none; margin-top: 3px; }
+.rrow-new { margin-left: 8px; vertical-align: 3px; }
+@media (max-width: 899px) {
+  .btn--lg { min-height: 0; padding: 10px 16px; }
+}
+
+/* ---------- Admin order page v3 ---------- */
+.show-phone-block { display: none; }
+.ocust { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 4px 0 22px; border: 1px solid var(--greige); background: #fff; text-decoration: none; color: var(--charcoal); }
+.ocust:hover { border-color: var(--charcoal); }
+.ocust-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ocust-main b { font-weight: 500; font-size: 14.5px; }
+.ocust-main small { color: #8a867f; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ocust-stats { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; color: #6c6862; }
+.ocust-stats .num { font-size: 15px; color: var(--charcoal); }
+.ocust-arrow { transform: rotate(180deg); color: #a29e97; flex: none; }
+.order-sub { font-style: normal; }
+
+.ov { margin-top: 18px; }
+.ov-next { margin: 0 0 14px; max-width: none; }
+.steps { list-style: none; margin: 0 0 26px; padding: 0; }
+.step { position: relative; display: flex; gap: 14px; padding: 0 0 14px; }
+.step:not(:last-child)::before { content: ''; position: absolute; left: 8px; top: 20px; bottom: 0; width: 1px; background: var(--greige); }
+.step--done:not(:last-child)::before { background: var(--charcoal); }
+.step-mark { position: relative; z-index: 1; flex: none; width: 17px; height: 17px; margin-top: 3px; border-radius: 50%; border: 1px solid var(--greige); background: var(--white); display: flex; align-items: center; justify-content: center; color: var(--white); }
+.step--done .step-mark { background: var(--charcoal); border-color: var(--charcoal); }
+.step--now .step-mark { border: 5px solid var(--oxblood); }
+.step-body { flex: 1; min-width: 0; }
+.step-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 24px; }
+.step-label { font-size: 14.5px; }
+.step-label.link-btn { text-decoration-color: var(--greige); }
+.step--now .step-label { color: var(--oxblood); }
+.step--todo .step-label { color: #a29e97; }
+.step-sub { font-size: 12.5px; color: #8a867f; margin: 1px 0 0; }
+.step .panel-box { margin-top: 10px; }
+
+.ov-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--charcoal); padding-bottom: 6px; }
+.log { list-style: none; margin: 0; padding: 0; }
+.log-row { display: flex; align-items: baseline; gap: 12px; width: 100%; padding: 10px 0; border: 0; border-bottom: 1px solid #E6E3DE; background: none; font: inherit; color: inherit; text-align: left; }
+button.log-row { cursor: pointer; }
+button.log-row:hover .log-text > span { color: var(--oxblood); }
+.log-text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13.5px; }
+.log-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-text small { color: #8a867f; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-strong { color: var(--oxblood); }
+.log-time { flex: none; font-size: 12px; color: #a29e97; }
+.log-more { margin-top: 10px; }
+.ov-tools { margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--greige); }
+.paybox--light { border-color: var(--greige); }
+.paybox--light .paybox-head { background: transparent; color: var(--charcoal); border-bottom: 1px solid var(--charcoal); }
+.paybox--light .paybox-head .label { color: #6c6862; }
+
+@media (max-width: 899px) {
+  .show-phone-block { display: block; margin-top: 26px; }
+  .ocust { margin: 0 0 18px; padding: 10px 12px; }
+}

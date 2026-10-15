@@ -33,7 +33,7 @@ export function RoundFiles({ round, title }) {
 }
 
 // Compact list of rounds (earlier proofs, admin files tab)
-export function RoundList({ rounds }) {
+export function RoundList({ rounds, newest = null }) {
   const [open, setOpen] = useState(null);
   return (
     <>
@@ -41,7 +41,7 @@ export function RoundList({ rounds }) {
         {rounds.map((r) => (
           <div key={r.number} className="rrow">
             <button type="button" className="rrow-main" onClick={() => setOpen(r)}>
-              <span className="rrow-title">Proof {r.number}</span>
+              <span className="rrow-title">Proof {r.number}{newest === r.number && <span className="ntag ntag--ox rrow-new">New</span>}</span>
               <span className="rrow-meta">
                 {r.files.length} {r.files.length === 1 ? 'file' : 'files'} · {formatDate(r.at)}
                 {r.verdict && <span className={r.verdict.kind === 'approval' ? 'ok' : ''}> · {verdictText(r)}</span>}
