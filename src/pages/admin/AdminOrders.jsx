@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { isActive, isDone, money, shortDate, useAdmin } from '../../lib/portalData';
 import { StageDot } from '../../components/Bits';
 import Icon from '../../components/Icons';
+import FilterMenu from '../../components/FilterMenu';
 import { shortPlanner } from './AdminHome';
 
 const STATUS = [
@@ -13,7 +14,7 @@ const STATUS = [
   { key: 'closed', label: 'Closed', test: (o) => o.stage === 'closed' },
 ];
 const LICENSE = [
-  { key: 'any', label: 'Any license' },
+  { key: 'any', label: 'All' },
   { key: 'personal', label: 'Personal' },
   { key: 'commercial', label: 'Commercial' },
 ];
@@ -48,17 +49,19 @@ export default function AdminOrders() {
 
   return (
     <main className="page page--wide">
-      <div className="page-head">
-        <h1 className="h-page">All orders</h1>
+      <h1 className="h-page">All orders</h1>
+      <div className="toolbar">
         <label className="search">
           <Icon name="search" size={16} />
           <span className="sr-only">Search</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, or order #" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search orders" />
         </label>
-      </div>
-      <div className="filters">
-        <div className="seg">{STATUS.map((s) => <button key={s.key} type="button" className={status === s.key ? 'on' : ''} onClick={() => setStatus(s.key)}>{s.label}</button>)}</div>
-        <div className="seg">{LICENSE.map((s) => <button key={s.key} type="button" className={license === s.key ? 'on' : ''} onClick={() => setLicense(s.key)}>{s.label}</button>)}</div>
+        <FilterMenu
+          groups={[
+            { key: 'status', title: 'Status', all: 'all', value: status, onChange: setStatus, options: STATUS.map((s) => ({ ...s, count: orders.filter(s.test).length })) },
+            { key: 'license', title: 'License', all: 'any', value: license, onChange: setLicense, options: LICENSE },
+          ]}
+        />
       </div>
 
       {groups.length === 0 && <p className="muted">No orders match.</p>}

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import Icon from '../components/Icons';
 import { currentSubscription, disablePush, enablePush, needsHomeScreen, pushSupported } from '../lib/push';
 import { errorText } from '../lib/orderApi';
 
@@ -97,6 +99,7 @@ export default function SettingsPage({ email, isAdmin }) {
 
   return (
     <main className="page page--narrow">
+      {isAdmin && <Link to="/notifications" className="back-link"><Icon name="back" size={16} /> Notifications</Link>}
       <h1 className="h-page">Settings</h1>
 
       <p className="label muted section-gap">Signed in as</p>

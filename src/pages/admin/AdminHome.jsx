@@ -93,7 +93,7 @@ export default function AdminHome() {
 
       <div className="glance">
         <span className={needs.length ? 'hot' : ''}><b>{needs.length}</b> need you</span>
-        <span><b>{active.filter((o) => o.stage === 'order_placed').length}</b> waiting on a brief</span>
+        <span><b>{active.filter((o) => o.stage === 'order_placed').length}</b> <span className="hide-phone">waiting on a brief</span><span className="show-phone">need a brief</span></span>
         <span><b>{active.filter((o) => o.stage === 'proof_ready').length}</b> proof out</span>
         <span><b>{dueWeek}</b> due this week</span>
       </div>

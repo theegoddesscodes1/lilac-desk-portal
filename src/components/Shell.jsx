@@ -2,11 +2,14 @@ import { Link, NavLink } from 'react-router-dom';
 import Icon from './Icons';
 
 // Sidebar on desktop and iPad, bottom bar on phones. Same items in both.
-export default function Shell({ items, sub, footer, topRight, children }) {
+export default function Shell({ items, sub, footer, topRight, sideTop, children }) {
   return (
     <div className="app">
       <aside className="side">
-        <Link to="/" className="side-wm">Lilac Desk</Link>
+        <div className="side-top">
+          <Link to="/" className="side-wm">Lilac Desk</Link>
+          {sideTop}
+        </div>
         <p className="side-sub">{sub}</p>
         <nav className="side-nav" aria-label="Main">
           {items.map((item) => (

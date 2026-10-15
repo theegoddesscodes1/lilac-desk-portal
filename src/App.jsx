@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useMatch } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { SHOP_URL } from './portal-config';
@@ -13,11 +13,31 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrder from './pages/admin/AdminOrder';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminIncome from './pages/admin/AdminIncome';
+import AdminNotifications, { buildFeed, readSeen, writeSeen } from './pages/admin/AdminNotifications';
 import { AdminCustomer, AdminCustomerList } from './pages/admin/AdminCustomers';
 import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerProofs, CustomerRoot } from './pages/customer/CustomerPages';
 
 function AdminApp({ email }) {
-  const { activeCount, unreadThreads } = useAdmin();
+  const data = useAdmin();
+  const { activeCount, unreadThreads } = data;
+  const [seenAt, setSeenAt] = useState(() => {
+    const t = readSeen();
+    if (t) return t;
+    const now = Date.now();
+    writeSeen(now);
+    return now;
+  });
+  const markSeen = useCallback((t) => {
+    writeSeen(t);
+    setSeenAt(t);
+  }, []);
+  const newCount = useMemo(() => (data.loading ? 0 : buildFeed(data).filter((i) => new Date(i.at).getTime() > seenAt).length), [data, seenAt]);
+  const bell = (
+    <Link to="/notifications" className="ptop-icon bell" aria-label={newCount ? `Notifications, ${newCount} new` : 'Notifications'}>
+      <Icon name="bell" />
+      {newCount > 0 && <span className="badge">{newCount > 9 ? '9+' : newCount}</span>}
+    </Link>
+  );
   const items = [
     { to: '/', label: 'Home', icon: 'home', end: true },
     { to: '/orders', label: 'Orders', icon: 'list', badge: activeCount, tone: 'grey' },
@@ -29,7 +49,8 @@ function AdminApp({ email }) {
     <Shell
       items={items}
       sub="Studio"
-      topRight={<Link to="/settings" className="ptop-icon" aria-label="Settings"><Icon name="bell" /></Link>}
+      topRight={bell}
+      sideTop={bell}
       footer={
         <>
           <p>{email}</p>
@@ -46,6 +67,7 @@ function AdminApp({ email }) {
         <Route path="/income" element={<AdminIncome />} />
         <Route path="/customers" element={<AdminCustomerList />} />
         <Route path="/customers/:email" element={<AdminCustomer />} />
+        <Route path="/notifications" element={<AdminNotifications seenAt={seenAt} onSeen={markSeen} />} />
         <Route path="/settings" element={<SettingsPage email={email} isAdmin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
