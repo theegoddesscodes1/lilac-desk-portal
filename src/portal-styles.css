@@ -55,7 +55,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--c
   text-transform: uppercase;
   text-decoration: none;
 }
-.h-page { font-family: var(--serif); font-size: clamp(30px, 5vw, 40px); line-height: 1.1; margin-bottom: 6px; }
+.h-page { font-family: var(--serif); font-size: clamp(26px, 4vw, 32px); line-height: 1.1; margin-bottom: 6px; }
 .h-section { font-family: var(--serif); font-size: 22px; line-height: 1.2; margin-bottom: 14px; }
 .h-sub { font-family: var(--serif); font-size: 17px; margin: 18px 0 8px; }
 .label {

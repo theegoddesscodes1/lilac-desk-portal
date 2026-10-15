@@ -118,7 +118,7 @@ export default function AdminDashboardPage() {
                     <td>{stageInfo(o.stage).label}</td>
                     <td>{dueText(o)}</td>
                     <td className={flag ? 'flag' : ''}>
-                      {quiet === 0 ? 'Today' : `${quiet} days ago`}
+                      {quiet === 0 ? 'Today' : quiet === 1 ? 'Yesterday' : `${quiet} days ago`}
                       {flag && <span className="block small">Can be closed</span>}
                     </td>
                   </tr>
