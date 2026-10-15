@@ -1,6 +1,8 @@
 // Supabase Edge Function: shopify-order-webhook
 // Save as supabase/functions/shopify-order-webhook/index.ts
-// Receives Shopify "Order payment" webhooks and creates portal orders and add-ons.
+// Receives Shopify webhooks:
+//   Order payment   -> creates portal orders and add-ons, with prices
+//   Refund creation -> records refunds against the order (for Income)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -92,6 +94,56 @@ async function signInLink(email: string, orderId: string) {
   return `${PORTAL_URL}/welcome?token_hash=${encodeURIComponent(hashed)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`;
 }
 
+// Phone notification through the portal-push function (never blocks the webhook)
+async function push(to: "admin" | "customer", title: string, body: string, url: string, email?: string) {
+  try {
+    await fetch(`${env("SUPABASE_URL")}/functions/v1/portal-push`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ to, email, title, body, url }),
+    });
+  } catch (err) {
+    console.error("Push failed", err);
+  }
+}
+
+// What the customer actually paid for a line, after discounts
+function linePaid(item: any): number {
+  const qty = Number(item.quantity ?? 1) || 1;
+  const gross = Number(item.price ?? 0) * qty;
+  const discount = Number(item.total_discount ?? 0) ||
+    (item.discount_allocations ?? []).reduce((n: number, d: any) => n + Number(d.amount ?? 0), 0);
+  return Math.max(0, Math.round((gross - discount) * 100) / 100);
+}
+
+async function handleRefund(refund: any) {
+  const orderId = refund.order_id;
+  const amount = (refund.transactions ?? [])
+    .filter((t: any) => t.kind === "refund" && t.status === "success")
+    .reduce((n: number, t: any) => n + Number(t.amount ?? 0), 0);
+  if (!orderId || !amount) return new Response("ok", { status: 200 });
+
+  const { data: rows } = await db
+    .from("orders")
+    .select("id, refunded_amount, refund_ids")
+    .eq("shopify_order_id", orderId)
+    .order("copy_index", { ascending: true })
+    .limit(1);
+  const target = rows?.[0];
+  if (!target) return new Response("ok", { status: 200 });
+  if ((target.refund_ids ?? []).map(String).includes(String(refund.id))) return new Response("ok", { status: 200 });
+
+  await db
+    .from("orders")
+    .update({
+      refunded_amount: Math.round((Number(target.refunded_amount ?? 0) + amount) * 100) / 100,
+      refunded_at: refund.created_at ?? new Date().toISOString(),
+      refund_ids: [...(target.refund_ids ?? []), refund.id],
+    })
+    .eq("id", target.id);
+  return new Response("ok", { status: 200 });
+}
+
 async function systemMessage(orderId: string, body: string) {
   await db.from("messages").insert({ order_id: orderId, sender: "system", body });
 }
@@ -106,7 +158,10 @@ Deno.serve(async (req) => {
     return new Response("Invalid signature", { status: 401 });
   }
 
-  const shopOrder = JSON.parse(raw);
+  const payload = JSON.parse(raw);
+  if ((req.headers.get("x-shopify-topic") ?? "") === "refunds/create") return handleRefund(payload);
+
+  const shopOrder = payload;
   const email = String(shopOrder.email || shopOrder.contact_email || shopOrder.customer?.email || "").toLowerCase();
   if (!email) return new Response("No customer email", { status: 200 });
 
@@ -144,6 +199,7 @@ Deno.serve(async (req) => {
         license,
         tier: tierKey,
         revisions_included: tier.revisions,
+        planner_price: Math.round((linePaid(item) / (Number(item.quantity ?? 1) || 1)) * 100) / 100,
       });
     }
   }
@@ -177,6 +233,13 @@ Deno.serve(async (req) => {
           "Start your brief",
           briefLink,
         ),
+      );
+
+      await push(
+        "admin",
+        `New order ${order.shopify_order_name}`,
+        `${customerName ?? email} ordered a ${tier.label} ${licenseLabel.toLowerCase()} planner.`,
+        `/orders/${order.id}`,
       );
 
       await sendEmail(
@@ -245,6 +308,7 @@ Deno.serve(async (req) => {
           addon_key: addon.key,
           name: addon.name,
           quantity,
+          price: linePaid(item),
           shopify_order_id: shopOrder.id,
           shopify_line_item_id: item.id,
         },
@@ -272,6 +336,12 @@ Deno.serve(async (req) => {
     );
 
     if (!createdOrders.find((o) => o.id === target.id)) {
+      await push(
+        "admin",
+        `Add-on bought on ${target.shopify_order_name}`,
+        `${target.customer_name ?? email} added ${addon.name}${quantity > 1 ? ` (x${quantity})` : ""}.`,
+        `/orders/${target.id}`,
+      );
       await sendEmail(
         env("ADMIN_EMAIL"),
         `Add-on purchased on ${target.shopify_order_name}`,

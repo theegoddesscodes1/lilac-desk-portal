@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { ALL_STAGES, NO_RESPONSE_DAYS, WAITING_ON_CUSTOMER, plannerLabel, stageInfo } from '../portal-config';
-import { daysSince, errorText, formatDate, notify, uploadOrderFile, useOrderData } from '../lib/orderApi';
-import StageTracker from '../components/StageTracker';
-import BriefForm from '../components/BriefForm';
-import FileList from '../components/FileList';
-import ChatPanel from '../components/ChatPanel';
+import { ALL_STAGES, stageInfo } from '../portal-config';
+import { errorText, notify, uploadOrderFile } from '../lib/orderApi';
 
 function toLocalInput(value) {
   if (!value) return '';
@@ -15,7 +10,7 @@ function toLocalInput(value) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function StageControl({ order }) {
+export function StageControl({ order }) {
   const [stage, setStage] = useState(order.stage);
   const [tell, setTell] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -63,7 +58,7 @@ function StageControl({ order }) {
   );
 }
 
-function DueAndRevisions({ order }) {
+export function DueAndRevisions({ order }) {
   const [due, setDue] = useState(toLocalInput(order.due_at));
   const [included, setIncluded] = useState(order.revisions_included);
   const [used, setUsed] = useState(order.revisions_used);
@@ -110,8 +105,8 @@ function DueAndRevisions({ order }) {
   );
 }
 
-function Uploader({ order }) {
-  const [kind, setKind] = useState('proof');
+export function Uploader({ order, defaultKind = 'proof' }) {
+  const [kind, setKind] = useState(defaultKind);
   const [watermark, setWatermark] = useState(true);
   const [advance, setAdvance] = useState(true);
   const [files, setFiles] = useState([]);
@@ -203,104 +198,3 @@ function Uploader({ order }) {
   );
 }
 
-export default function AdminOrderPage() {
-  const { id } = useParams();
-  const { loading, error, order, files, messages, orderAddons } = useOrderData(id);
-
-  if (loading) return <p className="muted page-pad">Loading order</p>;
-  if (error) {
-    return (
-      <main className="page">
-        <p className="error">{error}</p>
-        <Link to="/" className="link-btn">Back to orders</Link>
-      </main>
-    );
-  }
-
-  const quiet = daysSince(order.last_customer_activity_at);
-  const flag = WAITING_ON_CUSTOMER.includes(order.stage) && quiet >= NO_RESPONSE_DAYS;
-  const byKind = (k) => files.filter((f) => f.kind === k);
-
-  return (
-    <main className="page page--wide">
-      <header className="order-head">
-        <Link to="/" className="back-link">All orders</Link>
-        <h1 className="h-page">{order.shopify_order_name}</h1>
-        <p className="order-sub">
-          {plannerLabel(order)}, {order.customer_name || order.customer_email}
-          {order.customer_name && <span className="muted"> ({order.customer_email})</span>}
-        </p>
-        <p className="muted small">
-          Ordered {formatDate(order.created_at)}
-          {order.brief_submitted_at && `, brief submitted ${formatDate(order.brief_submitted_at)}`}
-          {order.due_at && `, due ${formatDate(order.due_at, true)}`}
-          {order.delivered_at && `, delivered ${formatDate(order.delivered_at)}`}
-        </p>
-        {flag && (
-          <p className="flag-note">
-            No response for {quiet} days. Under your policy this order can be closed.
-          </p>
-        )}
-      </header>
-
-      <StageTracker stage={order.stage} />
-
-      <div className="order-grid">
-        <div className="order-main">
-          <section className="panel">
-            <h2 className="h-section">Manage</h2>
-            <StageControl order={order} />
-            <DueAndRevisions order={order} />
-            <Uploader order={order} />
-          </section>
-
-          <section className="panel">
-            <h2 className="h-section">Files</h2>
-            <h3 className="h-sub">Proofs</h3>
-            <FileList files={byKind('proof')} empty="No proofs yet." />
-            <h3 className="h-sub">Final files</h3>
-            <FileList files={[...byKind('final'), ...byKind('source')]} empty="No final files yet." />
-            <h3 className="h-sub">From the customer</h3>
-            <FileList files={[...byKind('brief'), ...byKind('chat')]} empty="Nothing uploaded yet." />
-          </section>
-
-          <section className="panel">
-            <h2 className="h-section">Add-ons</h2>
-            {orderAddons.length === 0 ? (
-              <p className="muted">No add-ons.</p>
-            ) : (
-              <ul className="plain-list">
-                {orderAddons.map((a) => (
-                  <li key={a.id}>
-                    {a.name}
-                    {a.quantity > 1 ? ` (x${a.quantity})` : ''}
-                    <span className="muted small"> {formatDate(a.created_at)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="panel">
-            <h2 className="h-section">Brief</h2>
-            {order.brief_submitted_at ? (
-              <BriefForm order={order} readOnly />
-            ) : (
-              <p className="muted">Not submitted yet.</p>
-            )}
-          </section>
-        </div>
-
-        <aside className="order-side">
-          <ChatPanel
-            orderId={order.id}
-            messages={messages}
-            files={files}
-            viewer="admin"
-            customerName={order.customer_name || order.customer_email}
-          />
-        </aside>
-      </div>
-    </main>
-  );
-}

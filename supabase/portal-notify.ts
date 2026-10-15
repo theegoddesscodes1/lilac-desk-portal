@@ -1,7 +1,8 @@
 // Supabase Edge Function: portal-notify
 // Save as supabase/functions/portal-notify/index.ts
 // Called by the portal after an update. Emails the customer (when Kerry acts)
-// or Kerry (when the customer acts). Recipients are never taken from the request.
+// or Kerry (when the customer acts), and sends a phone notification through portal-push.
+// Recipients are never taken from the request. Customers' email and phone settings are respected.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -21,6 +22,30 @@ function corsFor(req: Request) {
 }
 
 type Recipient = "customer" | "admin" | "other";
+
+const PUSH: Record<string, (o: any, toCustomer: boolean) => { title: string; body: string }> = {
+  stage: () => ({ title: "An update on your planner", body: "Tap to see where your order is at." }),
+  proof_ready: () => ({ title: "Your proof is ready", body: "Take a look, then approve it or request changes." }),
+  final_ready: () => ({ title: "Your planner is ready", body: "Your final files are ready to download." }),
+  message: (o, toCustomer) => toCustomer
+    ? { title: "New message from Kerry", body: "Tap to read and reply." }
+    : { title: `Message from ${o.customer_name ?? o.customer_email}`, body: `${o.shopify_order_name ?? "Custom planner"}: tap to read and reply.` },
+  brief_submitted: (o) => ({ title: `Brief in: ${o.shopify_order_name ?? ""}`, body: `${o.customer_name ?? o.customer_email} submitted their brief. The countdown has started.` }),
+  revision_request: (o) => ({ title: `Changes requested: ${o.shopify_order_name ?? ""}`, body: `${o.customer_name ?? o.customer_email} sent a list of changes.` }),
+  approved: (o) => ({ title: `Proof approved: ${o.shopify_order_name ?? ""}`, body: `${o.customer_name ?? o.customer_email} approved the proof. Final files are next.` }),
+};
+
+async function push(to: "admin" | "customer", email: string | null, title: string, body: string, url: string) {
+  try {
+    await fetch(`${env("SUPABASE_URL")}/functions/v1/portal-push`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ to, email, title, body, url }),
+    });
+  } catch (err) {
+    console.error("Push failed", err);
+  }
+}
 
 const EVENTS: Record<string, { to: Recipient; subject: string; heading: string; body: string }> = {
   stage: {
@@ -76,9 +101,9 @@ function emailLayout(heading: string, body: string, url: string) {
   <div style="background:#FAFAF8;padding:40px 20px;font-family:Helvetica,Arial,sans-serif;color:#333333;">
     <div style="max-width:520px;margin:0 auto;">
       <p style="font-family:'Times New Roman',Times,serif;font-size:20px;letter-spacing:4px;text-transform:uppercase;margin:0 0 28px;">Lilac Desk</p>
-      <h1 style="font-family:'Times New Roman',Times,serif;font-weight:400;font-size:28px;line-height:1.2;margin:0 0 16px;">${heading}</h1>
+      <h1 style="font-family:'Times New Roman',Times,serif;font-weight:400;font-size:24px;line-height:1.25;margin:0 0 16px;">${heading}</h1>
       <p style="font-size:15px;line-height:1.6;margin:0 0 28px;">${body}</p>
-      <a href="${url}" style="display:inline-block;background:#333333;color:#FAFAF8;text-decoration:none;padding:14px 28px;font-size:13px;letter-spacing:1px;text-transform:uppercase;">Open order page</a>
+      <a href="${url}" style="display:inline-block;background:#5C181E;color:#FAFAF8;text-decoration:none;padding:14px 28px;font-size:13px;letter-spacing:1px;text-transform:uppercase;">Open order page</a>
     </div>
   </div>`;
 }
@@ -112,15 +137,37 @@ Deno.serve(async (req) => {
   if (to === "customer" && !isAdmin) return reply({ error: "Not allowed" }, 403);
   if (to === "admin" && isAdmin) return reply({ skipped: true });
 
+  const service = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
+    auth: { persistSession: false },
+  });
+
+  // Phone notification first: it has no cooldown and respects the customer's setting itself
+  const note = PUSH[event as string]?.(order, to === "customer");
+  if (note) {
+    await push(to, to === "customer" ? order.customer_email : null, note.title, note.body, `/orders/${order.id}`);
+  }
+
   const column = to === "customer" ? "last_notified_customer_at" : "last_notified_admin_at";
   if (event === "message" && order[column]) {
     const since = Date.now() - new Date(order[column]).getTime();
     if (since < MESSAGE_COOLDOWN_MS) return reply({ skipped: "cooldown" });
   }
 
-  const recipient = to === "customer" ? order.customer_email : env("ADMIN_EMAIL");
+  let recipients: string[] = [];
+  if (to === "customer") {
+    const { data: profile } = await service
+      .from("customer_profiles")
+      .select("notify_email, alt_email")
+      .ilike("email", order.customer_email)
+      .maybeSingle();
+    if (profile?.notify_email === false) return reply({ skipped: "customer turned off email" });
+    recipients = [order.customer_email, profile?.alt_email].filter(Boolean) as string[];
+  } else {
+    recipients = [env("ADMIN_EMAIL")].filter(Boolean);
+  }
+
   const key = env("RESEND_API_KEY");
-  if (!key || !recipient) return reply({ skipped: "email not configured" });
+  if (!key || recipients.length === 0) return reply({ skipped: "email not configured" });
 
   const subject = `${def.subject} (${order.shopify_order_name ?? "custom planner"})`;
   const res = await fetch("https://api.resend.com/emails", {
@@ -128,16 +175,13 @@ Deno.serve(async (req) => {
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: env("EMAIL_FROM"),
-      to: recipient,
+      to: recipients,
       subject,
       html: emailLayout(def.heading, def.body, `${PORTAL_URL}/orders/${order.id}`),
     }),
   });
   if (!res.ok) return reply({ error: await res.text() }, 502);
 
-  const service = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
-    auth: { persistSession: false },
-  });
   await service.from("orders").update({ [column]: new Date().toISOString() }).eq("id", order.id);
 
   return reply({ sent: true });

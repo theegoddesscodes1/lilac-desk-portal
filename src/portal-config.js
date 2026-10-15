@@ -147,3 +147,32 @@ export function visibleSections(ctx) {
     .map((section) => ({ ...section, fields: section.fields.filter((f) => !f.showIf || f.showIf(ctx)) }))
     .filter((section) => section.fields.length > 0);
 }
+
+// ---------------------------------------------------------------
+// Version 2
+// ---------------------------------------------------------------
+
+// Public key for phone notifications (the private half lives in Supabase secrets)
+export const VAPID_PUBLIC_KEY = 'BCKPti5o2S_Ht17FM3BY28OdIUPBqdtXSE9Q_HrD9cwtwpVdjW9mE2OREHHOcmy7D1k8cqtCtpJ4W3uatvBfaG0';
+
+// Where "Leave a review" goes. Leave blank to hide the button.
+export const REVIEW_URL = '';
+
+// Add-ons a customer can buy more than once on the same order
+export const REPEATABLE_ADDONS = ['extra_pages', 'extra_template', 'extra_revision', 'link_pack', 'colorway', 'personalized_copies'];
+
+export const ACTIVE_STAGES = ['order_placed', 'brief_received', 'designing', 'proof_ready', 'revisions', 'approved'];
+export const DONE_STAGES = ['delivered', 'complete'];
+
+// Short status dots used across the portal
+export const STAGE_TONE = {
+  order_placed: 'grey',
+  brief_received: 'dark',
+  designing: 'dark',
+  proof_ready: 'lilac',
+  revisions: 'red',
+  approved: 'red',
+  delivered: 'grey',
+  complete: 'grey',
+  closed: 'grey',
+};

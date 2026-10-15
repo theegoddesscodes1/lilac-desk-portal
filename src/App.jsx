@@ -1,28 +1,92 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useMatch } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { SHOP_URL } from './portal-config';
+import { registerServiceWorker } from './lib/push';
+import { AdminDataProvider, CustomerDataProvider, useAdmin, useCustomer } from './lib/portalData';
+import Shell from './components/Shell';
+import Icon from './components/Icons';
 import LoginPage from './pages/LoginPage';
-import OrdersListPage from './pages/OrdersListPage';
-import OrderPage from './pages/OrderPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
-import AdminOrderPage from './pages/AdminOrderPage';
+import SettingsPage from './pages/SettingsPage';
+import AdminHome from './pages/admin/AdminHome';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminOrder from './pages/admin/AdminOrder';
+import AdminMessages from './pages/admin/AdminMessages';
+import AdminIncome from './pages/admin/AdminIncome';
+import { AdminCustomer, AdminCustomerList } from './pages/admin/AdminCustomers';
+import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerProofs, CustomerRoot } from './pages/customer/CustomerPages';
 
-function Shell({ email, isAdmin, children }) {
+function AdminApp({ email }) {
+  const { activeCount, unreadThreads } = useAdmin();
+  const items = [
+    { to: '/', label: 'Home', icon: 'home', end: true },
+    { to: '/orders', label: 'Orders', icon: 'list', badge: activeCount, tone: 'grey' },
+    { to: '/messages', label: 'Messages', icon: 'chat', badge: unreadThreads },
+    { to: '/income', label: 'Income', icon: 'income' },
+    { to: '/customers', label: 'Customers', icon: 'users' },
+  ];
   return (
-    <div className="shell">
-      <header className="topbar">
-        <Link to="/" className="wordmark">Lilac Desk</Link>
-        <nav className="topbar-nav">
-          <span className="topbar-who">{isAdmin ? 'Admin' : email}</span>
-          {!isAdmin && <a href={SHOP_URL}>Shop</a>}
-          <button type="button" className="link-btn" onClick={() => supabase.auth.signOut()}>
-            Sign out
-          </button>
-        </nav>
-      </header>
-      {children}
-    </div>
+    <Shell
+      items={items}
+      sub="Studio"
+      topRight={<Link to="/settings" className="ptop-icon" aria-label="Settings"><Icon name="bell" /></Link>}
+      footer={
+        <>
+          <p>{email}</p>
+          <p><Link to="/settings"><u>Settings</u></Link> · <button type="button" className="link-btn" onClick={() => supabase.auth.signOut()}>Sign out</button></p>
+        </>
+      }
+    >
+      <Routes>
+        <Route path="/" element={<AdminHome />} />
+        <Route path="/orders" element={<AdminOrders />} />
+        <Route path="/orders/:id" element={<AdminOrder />} />
+        <Route path="/messages" element={<AdminMessages />} />
+        <Route path="/messages/:id" element={<AdminMessages />} />
+        <Route path="/income" element={<AdminIncome />} />
+        <Route path="/customers" element={<AdminCustomerList />} />
+        <Route path="/customers/:email" element={<AdminCustomer />} />
+        <Route path="/settings" element={<SettingsPage email={email} isAdmin />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Shell>
+  );
+}
+
+function CustomerApp({ email }) {
+  const { current, orders, unreadFor } = useCustomer();
+  const match = useMatch('/orders/:id/*');
+  const order = orders.find((o) => o.id === match?.params.id) || current;
+  const base = order ? `/orders/${order.id}` : '/';
+  const items = [
+    { to: base, label: 'Home', icon: 'home', end: true },
+    { to: `${base}/proofs`, label: 'Proofs', icon: 'proof', badge: order?.stage === 'proof_ready' ? 1 : 0 },
+    { to: `${base}/messages`, label: 'Messages', icon: 'chat', badge: order ? unreadFor(order.id) : 0 },
+    { to: `${base}/files`, label: 'Files', icon: 'files', dot: ['delivered'].includes(order?.stage) },
+  ];
+  return (
+    <Shell
+      items={items}
+      sub="Your order"
+      topRight={<Link to="/settings" className="avatar avatar--sm" aria-label="Settings">{email.charAt(0).toUpperCase()}</Link>}
+      footer={
+        <>
+          <p>{email}</p>
+          <p><Link to="/settings"><u>Settings</u></Link> · <a href={SHOP_URL}><u>Shop</u></a> · <button type="button" className="link-btn" onClick={() => supabase.auth.signOut()}>Sign out</button></p>
+        </>
+      }
+    >
+      <Routes>
+        <Route path="/" element={<CustomerRoot />} />
+        <Route path="/orders/:id" element={<CustomerHome />} />
+        <Route path="/orders/:id/brief" element={<CustomerBrief />} />
+        <Route path="/orders/:id/proofs" element={<CustomerProofs />} />
+        <Route path="/orders/:id/messages" element={<CustomerMessages />} />
+        <Route path="/orders/:id/files" element={<CustomerFiles />} />
+        <Route path="/settings" element={<SettingsPage email={email} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Shell>
   );
 }
 
@@ -36,6 +100,10 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(null);
   const [linkChecking, setLinkChecking] = useState(() => window.location.pathname === '/welcome');
   const [linkNotice, setLinkNotice] = useState('');
+
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -84,13 +152,15 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Shell email={email} isAdmin={isAdmin}>
-        <Routes>
-          <Route path="/" element={isAdmin ? <AdminDashboardPage /> : <OrdersListPage email={email} />} />
-          <Route path="/orders/:id" element={isAdmin ? <AdminOrderPage /> : <OrderPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Shell>
+      {isAdmin ? (
+        <AdminDataProvider>
+          <AdminApp email={email} />
+        </AdminDataProvider>
+      ) : (
+        <CustomerDataProvider email={email}>
+          <CustomerApp email={email} />
+        </CustomerDataProvider>
+      )}
     </BrowserRouter>
   );
 }
