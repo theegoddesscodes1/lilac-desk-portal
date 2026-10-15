@@ -83,10 +83,10 @@ export default function AdminOrder() {
               <div>
                 <p className="label muted">Next step</p>
                 <p className="lead lead--it">{NEXT[order.stage]?.(first)}</p>
-                <div className="btn-row">
-                  <button type="button" className={`btn ${panel === 'proof' ? '' : 'btn--ox'}`} onClick={() => setPanel(panel === 'proof' ? '' : 'proof')}>Upload proof</button>
-                  <button type="button" className="btn btn--ghost" onClick={() => setPanel(panel === 'final' ? '' : 'final')}>Upload final</button>
-                  <button type="button" className="btn btn--ghost" onClick={() => setPanel(panel === 'stage' ? '' : 'stage')}>Change stage</button>
+                <div className="btn-row btn-row--three">
+                  <button type="button" className={`btn btn--sm ${panel === 'proof' ? '' : 'btn--ox'}`} onClick={() => setPanel(panel === 'proof' ? '' : 'proof')}>Upload proof</button>
+                  <button type="button" className="btn btn--sm btn--ghost" onClick={() => setPanel(panel === 'final' ? '' : 'final')}>Upload final</button>
+                  <button type="button" className="btn btn--sm btn--ghost" onClick={() => setPanel(panel === 'stage' ? '' : 'stage')}>Change stage</button>
                 </div>
                 {panel === 'proof' && <div className="panel-box"><Uploader order={order} defaultKind="proof" key="proof" /></div>}
                 {panel === 'final' && <div className="panel-box"><Uploader order={order} defaultKind="final" key="final" /></div>}
@@ -124,7 +124,7 @@ export default function AdminOrder() {
 
           {tab === 'brief' && (
             <div className="tab-body">
-              {order.brief_submitted_at ? <BriefForm order={order} readOnly /> : <p className="muted">Not submitted yet.</p>}
+              {order.brief_submitted_at ? <BriefForm order={order} orderAddons={orderAddons} readOnly /> : <p className="muted">Not submitted yet.</p>}
             </div>
           )}
 

@@ -112,50 +112,54 @@ async function sendOne(sub: Subscription, payload: string): Promise<number> {
 
 // ---------- main ----------
 
-if (import.meta.main) {
-  Deno.serve(async (req) => {
-    if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+Deno.serve(async (req) => {
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
-    const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY");
-    if (!serviceKey || req.headers.get("Authorization") !== `Bearer ${serviceKey}`) {
-      return new Response("Not allowed", { status: 403 });
-    }
-    if (!env("VAPID_PUBLIC_KEY") || !env("VAPID_PRIVATE_KEY")) {
-      return Response.json({ skipped: "push not configured" });
-    }
+  const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceKey || req.headers.get("Authorization") !== `Bearer ${serviceKey}`) {
+    console.log("portal-push: refused, wrong key");
+    return new Response("Not allowed", { status: 403 });
+  }
+  if (!env("VAPID_PUBLIC_KEY") || !env("VAPID_PRIVATE_KEY")) {
+    console.log("portal-push: VAPID secrets missing");
+    return Response.json({ skipped: "push not configured" });
+  }
 
-    const { to, email, title, body, url, tag } = await req.json().catch(() => ({}));
-    if (!title || (to !== "admin" && to !== "customer")) return new Response("Bad request", { status: 400 });
+  const { to, email, title, body, url, tag } = await req.json().catch(() => ({}));
+  if (!title || (to !== "admin" && to !== "customer")) return new Response("Bad request", { status: 400 });
 
-    const db = createClient(env("SUPABASE_URL"), serviceKey, { auth: { persistSession: false } });
+  const db = createClient(env("SUPABASE_URL"), serviceKey, { auth: { persistSession: false } });
 
-    let query = db.from("push_subscriptions").select("id, endpoint, p256dh, auth");
-    if (to === "admin") {
-      query = query.eq("is_admin", true);
-    } else {
-      if (!email) return new Response("Bad request", { status: 400 });
-      const { data: profile } = await db.from("customer_profiles").select("notify_push").ilike("email", email).maybeSingle();
-      if (profile && profile.notify_push === false) return Response.json({ skipped: "customer turned off" });
-      query = query.eq("is_admin", false).ilike("email", email);
-    }
+  let query = db.from("push_subscriptions").select("id, endpoint, p256dh, auth");
+  if (to === "admin") {
+    query = query.eq("is_admin", true);
+  } else {
+    if (!email) return new Response("Bad request", { status: 400 });
+    const { data: profile } = await db.from("customer_profiles").select("notify_push").ilike("email", email).maybeSingle();
+    if (profile && profile.notify_push === false) return Response.json({ skipped: "customer turned off" });
+    query = query.eq("is_admin", false).ilike("email", email);
+  }
 
-    const { data: subs } = await query;
-    const payload = JSON.stringify({ title, body: body ?? "", url: url ?? "/", tag: tag ?? undefined });
-    let sent = 0;
-    for (const sub of subs ?? []) {
-      try {
-        const status = await sendOne(sub as Subscription, payload);
-        if (status === 404 || status === 410) {
-          await db.from("push_subscriptions").delete().eq("id", sub.id);
-        } else if (status < 300) {
-          sent += 1;
-        } else {
-          console.error("Push failed", status, sub.endpoint);
-        }
-      } catch (err) {
-        console.error("Push error", err);
+  const { data: subs, error: subsError } = await query;
+  if (subsError) console.error("portal-push: could not read devices", subsError.message);
+  console.log(`portal-push: to ${to}${email ? ` (${email})` : ""}, ${subs?.length ?? 0} device(s)`);
+  const payload = JSON.stringify({ title, body: body ?? "", url: url ?? "/", tag: tag ?? undefined });
+  let sent = 0;
+  for (const sub of subs ?? []) {
+    try {
+      const status = await sendOne(sub as Subscription, payload);
+      if (status === 404 || status === 410) {
+        console.log("portal-push: removed expired device");
+        await db.from("push_subscriptions").delete().eq("id", sub.id);
+      } else if (status < 300) {
+        sent += 1;
+      } else {
+        console.error("Push failed", status, sub.endpoint);
       }
+    } catch (err) {
+      console.error("Push error", err);
     }
-    return Response.json({ sent });
-  });
-}
+  }
+  console.log(`portal-push: delivered to ${sent} device(s)`);
+  return Response.json({ sent, devices: subs?.length ?? 0 });
+});

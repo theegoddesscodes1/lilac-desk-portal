@@ -1,24 +1,44 @@
+import { useState } from 'react';
 import { formatDate, formatSize, openFile } from '../lib/orderApi';
+import { Lightbox, isImage, useViewUrls } from './FilePreview';
 
+// Images open in a viewer first; every file has its own Download button
 export default function FileList({ files, empty = 'No files yet.' }) {
+  const urls = useViewUrls(files);
+  const [open, setOpen] = useState(null);
   if (!files.length) return <p className="muted">{empty}</p>;
 
   return (
-    <ul className="file-list">
-      {files.map((file) => (
-        <li key={file.id} className="file-row">
-          <div>
-            <p className="file-name">{file.name}</p>
-            <p className="muted small">
-              {formatDate(file.created_at, true)}
-              {file.size ? `, ${formatSize(file.size)}` : ''}
-            </p>
-          </div>
-          <button type="button" className="btn btn--ghost" onClick={() => openFile(file)}>
-            Download
-          </button>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="file-list">
+        {files.map((file) => {
+          const url = isImage(file) ? urls[file.path] : null;
+          return (
+            <li key={file.id} className="file-row">
+              {url ? (
+                <button type="button" className="file-thumb" onClick={() => setOpen(file)} aria-label={`View ${file.name}`}>
+                  <img src={url} alt="" loading="lazy" />
+                </button>
+              ) : null}
+              <div className="file-info">
+                {url ? (
+                  <button type="button" className="file-name link-btn" onClick={() => setOpen(file)}>{file.name}</button>
+                ) : (
+                  <p className="file-name">{file.name}</p>
+                )}
+                <p className="muted small">
+                  {formatDate(file.created_at, true)}
+                  {file.size ? `, ${formatSize(file.size)}` : ''}
+                </p>
+              </div>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => openFile(file)}>
+                Download
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {open && <Lightbox file={open} url={urls[open.path]} onClose={() => setOpen(null)} />}
+    </>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useMatch } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { SHOP_URL } from './portal-config';
-import { registerServiceWorker } from './lib/push';
+import { registerServiceWorker, resyncPush } from './lib/push';
 import { AdminDataProvider, CustomerDataProvider, useAdmin, useCustomer } from './lib/portalData';
 import Shell from './components/Shell';
 import Icon from './components/Icons';
@@ -18,6 +18,9 @@ import { AdminCustomer, AdminCustomerList } from './pages/admin/AdminCustomers';
 import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerProofs, CustomerRoot } from './pages/customer/CustomerPages';
 
 function AdminApp({ email }) {
+  useEffect(() => {
+    resyncPush(email, true);
+  }, [email]);
   const data = useAdmin();
   const { activeCount, unreadThreads } = data;
   const [seenAt, markSeen] = useSeenAt();
@@ -66,6 +69,9 @@ function AdminApp({ email }) {
 }
 
 function CustomerApp({ email }) {
+  useEffect(() => {
+    resyncPush(email, false);
+  }, [email]);
   const { current, orders, unreadFor } = useCustomer();
   const match = useMatch('/orders/:id/*');
   const order = orders.find((o) => o.id === match?.params.id) || current;

@@ -48,6 +48,33 @@ export async function notify(orderId, event) {
   }
 }
 
+// Live updates can pause while a phone is locked or the app is in the background.
+// This catches up whenever the app comes back, after a reconnect, and every minute as a safety net.
+export function keepFresh(reload) {
+  let last = 0;
+  const run = () => {
+    if (Date.now() - last < 2000) return;
+    last = Date.now();
+    reload();
+  };
+  const onVisible = () => document.visibilityState === 'visible' && run();
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('focus', run);
+  window.addEventListener('online', run);
+  const timer = setInterval(() => document.visibilityState === 'visible' && run(), 60000);
+  return () => {
+    document.removeEventListener('visibilitychange', onVisible);
+    window.removeEventListener('focus', run);
+    window.removeEventListener('online', run);
+    clearInterval(timer);
+  };
+}
+
+// Reload once a channel (re)connects, so nothing sent while it was down is missed
+export const onConnected = (reload) => (status) => {
+  if (status === 'SUBSCRIBED') reload();
+};
+
 export function errorText(err) {
   return err?.message?.replace(/^.*?ERROR:\s*/, '') || 'Something went wrong. Try again.';
 }
@@ -110,8 +137,10 @@ export function useOrderData(orderId) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `order_id=eq.${orderId}` }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'files', filter: `order_id=eq.${orderId}` }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_addons', filter: `order_id=eq.${orderId}` }, reload)
-      .subscribe();
+      .subscribe(onConnected(reload));
+    const stop = keepFresh(reload);
     return () => {
+      stop();
       supabase.removeChannel(channel);
     };
   }, [orderId, reload]);

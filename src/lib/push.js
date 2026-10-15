@@ -69,3 +69,14 @@ export async function disablePush() {
   await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
   await sub.unsubscribe();
 }
+
+// On every launch: if this device already allowed notifications, make sure it's on file
+export async function resyncPush(email, isAdmin) {
+  try {
+    if (!pushSupported() || Notification.permission !== 'granted') return;
+    const sub = await currentSubscription();
+    if (sub) await enablePush(email, isAdmin);
+  } catch {
+    /* nothing to do */
+  }
+}

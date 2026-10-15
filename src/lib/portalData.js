@@ -1,6 +1,7 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { ACTIVE_STAGES, DONE_STAGES } from '../portal-config';
+import { keepFresh, onConnected } from './orderApi';
 
 // ---------- money and dates ----------
 
@@ -106,8 +107,10 @@ export function AdminDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_addons' }, soon)
-      .subscribe();
+      .subscribe(onConnected(soon));
+    const stop = keepFresh(reload);
     return () => {
+      stop();
       clearTimeout(timer);
       supabase.removeChannel(channel);
     };
@@ -161,8 +164,10 @@ export function CustomerDataProvider({ email, children }) {
       .channel('customer-all')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, reload)
-      .subscribe();
+      .subscribe(onConnected(reload));
+    const stop = keepFresh(reload);
     return () => {
+      stop();
       supabase.removeChannel(channel);
     };
   }, [reload]);

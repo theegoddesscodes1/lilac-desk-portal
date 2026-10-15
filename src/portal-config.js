@@ -42,101 +42,130 @@ export const plannerLabel = (order) =>
   `${TIERS[order.tier]?.label ?? order.tier} ${LICENSES[order.license]?.toLowerCase() ?? ''} planner`.trim();
 
 // ---------------------------------------------------------------
-// Brief questions. Field types: text, textarea, select, radio, checkboxes, files.
-// showIf receives { tier, license, values } and hides the field when it returns false.
+// Brief questions.
+// Field types: text, textarea, pills (pick one), multi (pick any), cards (pick one, with a line of detail),
+// month, images, files, check.
+// showIf receives { tier, license, values, addons } (addons = keys bought on this order).
+// extra: true puts the field in the boxed "add-on" area of its section.
 // ---------------------------------------------------------------
 
 const isDatedTier = ({ tier }) => tier !== 'basic';
 const isDated = ({ tier, values }) => tier !== 'basic' && values.dated === 'Dated';
 const isCommercial = ({ license }) => license === 'commercial';
+const isPersonal = ({ license }) => license === 'personal';
+const has = (key) => ({ addons }) => (addons || []).includes(key);
+
+export const MAX_INSPIRATION = 10;
 
 export const BRIEF_SECTIONS = [
   {
+    key: 'brand',
     title: 'Your brand',
     showIf: isCommercial,
     fields: [
       { name: 'businessName', label: 'Business name', type: 'text', required: true },
-      { name: 'productName', label: 'Product name', type: 'text' },
-      { name: 'logoFiles', label: 'Logo files', type: 'files', help: 'SVG, or PNG with a transparent background at 2000px wide or more.' },
-      { name: 'brandColors', label: 'Brand colors', type: 'text', help: 'Hex codes, like #5C181E.' },
-      { name: 'brandFonts', label: 'Brand fonts', type: 'text', help: 'Font names. Fonts must be licensed for commercial use.' },
-      { name: 'fontFiles', label: 'Font files', type: 'files', help: '.otf or .ttf, with proof of a commercial license.' },
-      { name: 'links', label: 'Website, shop link, or socials to include', type: 'textarea' },
+      { name: 'productName', label: 'Product name', type: 'text', optional: true },
+      { name: 'logoFiles', label: 'Logo files', type: 'files', optional: true, help: 'SVG, or PNG with a transparent background at 2000px wide or more.' },
+      { name: 'brandColors', label: 'Brand colors', type: 'text', optional: true, placeholder: '#5C181E, #D6D0DE' },
+      { name: 'brandFonts', label: 'Brand fonts', type: 'text', optional: true, help: 'Fonts must be licensed for commercial use.' },
+      { name: 'fontFiles', label: 'Font files', type: 'files', optional: true, help: '.otf or .ttf, with proof of a commercial license.' },
+      { name: 'links', label: 'Website or shop to show in the planner', type: 'text', optional: true, placeholder: 'yourshop.com, @yourhandle' },
     ],
   },
   {
+    key: 'buyer',
     title: 'Your buyer',
     showIf: isCommercial,
     fields: [
       { name: 'audience', label: 'Who the planner is for', type: 'textarea', required: true },
-      { name: 'whereSold', label: "Where you'll sell or share it", type: 'text', help: 'Etsy, Shopify, your site, or your clients.' },
-      { name: 'problem', label: 'The problem it solves for your buyer', type: 'textarea' },
-      { name: 'competition', label: 'Planners you see as competition', type: 'textarea' },
-      { name: 'personalizedNames', label: 'Names for personalized copies', type: 'textarea', help: 'Only if you bought personalized copies. One name per line. Each copy changes the name on the cover and welcome page only.' },
-      { name: 'copyrightLine', label: 'Copyright line for the footer', type: 'text' },
-      { name: 'welcomeText', label: 'Your own instructions or welcome page text', type: 'textarea' },
+      { name: 'whereSold', label: "Where you'll sell or share it", type: 'pills', multi: true, options: ['Etsy', 'Shopify', 'My website', 'My clients', 'Other'], optional: true },
+      { name: 'problem', label: 'The problem it solves for your buyer', type: 'textarea', optional: true },
+      { name: 'competition', label: 'Planners you see as competition', type: 'textarea', optional: true },
+      { name: 'copyrightLine', label: 'Copyright line for the footer', type: 'text', optional: true, placeholder: '© 2027 Your Business' },
+      { name: 'welcomeText', label: 'Welcome page or instructions text', type: 'textarea', optional: true },
+      { name: 'personalizedNames', label: 'Names for your personalized copies', type: 'textarea', extra: true, showIf: has('personalized_copies'), help: 'One name per line. Each copy changes the name on the cover and welcome page.' },
     ],
   },
   {
+    key: 'about',
     title: 'About you',
     fields: [
-      { name: 'recipient', label: "Gift? The recipient's name", type: 'text', showIf: ({ license }) => license === 'personal' },
-      { name: 'app', label: 'The app you use', type: 'select', required: true, options: ['GoodNotes', 'Notability', 'Noteshelf', 'Samsung Notes', 'Xodo', 'Other'] },
-      { name: 'appOther', label: 'Which app?', type: 'text', showIf: ({ values }) => values.app === 'Other' },
-      { name: 'device', label: 'Your device', type: 'select', required: true, options: ['iPad', 'Android tablet', 'Computer'] },
-      { name: 'orientation', label: 'Orientation', type: 'radio', required: true, options: ['Portrait', 'Landscape'] },
+      { name: 'recipient', label: 'Is it a gift?', type: 'text', optional: true, placeholder: "Recipient's name", showIf: isPersonal },
+      { name: 'app', label: 'The app you use', type: 'pills', required: true, options: ['GoodNotes', 'Notability', 'Noteshelf', 'Samsung Notes', 'Xodo', 'Other'] },
+      { name: 'appOther', label: 'Which app?', type: 'text', required: true, showIf: ({ values }) => values.app === 'Other' },
+      { name: 'device', label: 'Device', type: 'pills', required: true, half: true, options: ['iPad', 'Android tablet', 'Computer'] },
+      { name: 'orientation', label: 'Orientation', type: 'pills', required: true, half: true, options: ['Portrait', 'Landscape'] },
     ],
   },
   {
+    key: 'dates',
     title: 'Dates',
     fields: [
-      { name: 'dated', label: 'Dated or undated', type: 'radio', required: true, options: ['Dated', 'Undated'], showIf: isDatedTier },
-      { name: 'startMonth', label: 'Start month and year', type: 'text', help: 'For example, January 2027.', showIf: isDated, required: true },
-      { name: 'weekStart', label: 'Week starts on', type: 'radio', options: ['Sunday', 'Monday'] },
-      { name: 'timeFormat', label: 'Time format', type: 'radio', options: ['12-hour', '24-hour'] },
-      { name: 'holidays', label: 'Holidays', type: 'radio', options: ['Include holidays', 'No holidays', 'My own list'], showIf: isDated },
+      { name: 'dated', label: 'Dated or undated', type: 'pills', required: true, half: true, options: ['Dated', 'Undated'], showIf: isDatedTier },
+      { name: 'startMonth', label: 'Starts', type: 'month', required: true, half: true, showIf: isDated },
+      { name: 'weekStart', label: 'Week starts on', type: 'pills', half: true, options: ['Sunday', 'Monday'] },
+      { name: 'timeFormat', label: 'Time format', type: 'pills', half: true, options: ['12-hour', '24-hour'] },
+      { name: 'holidays', label: 'Holidays', type: 'pills', options: ['Include holidays', 'None', 'My own list'], showIf: isDated },
       { name: 'holidayList', label: 'Your holiday list', type: 'textarea', showIf: (ctx) => isDated(ctx) && ctx.values.holidays === 'My own list' },
-      { name: 'importantDates', label: 'Important dates to fill in', type: 'textarea', help: 'Only with the important dates add-on.', showIf: isDated },
+      { name: 'importantDates', label: 'Your important dates', type: 'textarea', extra: true, help: 'Birthdays, anniversaries, deadlines. One per line, like "Mar 14, Mom\'s birthday".', showIf: (ctx) => isDated(ctx) && has('important_dates')(ctx) },
     ],
   },
   {
-    title: 'Layouts',
+    key: 'style',
+    title: 'Planner style',
     fields: [
-      { name: 'monthly', label: 'Monthly view', type: 'checkboxes', options: ['Grid', 'Vertical list'], showIf: isDatedTier },
-      { name: 'weekly', label: 'Weekly view', type: 'checkboxes', options: ['Vertical columns', 'Horizontal rows', 'Hourly schedule'], showIf: isDatedTier },
-      { name: 'daily', label: 'Daily view', type: 'checkboxes', options: ['Time-blocked', 'Priorities and to-do', 'Journal page'], showIf: isDatedTier },
-      { name: 'tabs', label: 'Tab position', type: 'radio', options: ['Side', 'Top', 'Bottom'] },
-    ],
-  },
-  {
-    title: 'Pages',
-    fields: [
-      { name: 'sections', label: 'Sections, and how many pages of each', type: 'textarea', required: true, help: 'From the section library in the guide, like "Habit tracker, 12 pages".' },
-      { name: 'paperStyles', label: 'Paper styles for notes pages', type: 'checkboxes', options: ['Lined', 'Dot grid', 'Grid', 'Blank', 'Cornell notes', 'Checklist'] },
-      { name: 'customSection', label: 'Any custom section', type: 'textarea', help: 'Describe it in a sentence or two.' },
-      { name: 'stickerFormat', label: 'Sticker format', type: 'radio', options: ['GoodNotes', 'PNG', 'Both (add-on)'], help: 'Premium, or if you bought the sticker set.' },
-      { name: 'externalLinks', label: 'External links', type: 'textarea', help: 'Websites, Apple Shortcuts, or calendars. Needs the link pack add-on.' },
-    ],
-  },
-  {
-    title: 'Style',
-    fields: [
-      { name: 'colors', label: 'Colors', type: 'textarea', help: 'A mood, like muted pastels, or hex codes.', showIf: ({ license }) => license === 'personal' },
-      { name: 'fonts', label: 'Font style', type: 'text', help: 'Classic serif, clean sans-serif, script accents, or handwritten.' },
-      { name: 'feel', label: 'Three words for how it should feel', type: 'text' },
-      { name: 'cover', label: 'Cover style and cover text', type: 'textarea' },
-      { name: 'inspiration', label: '3 to 5 inspiration images', type: 'files' },
-      { name: 'dislikes', label: "Anything you don't want", type: 'textarea' },
       {
-        name: 'portfolio',
-        label: 'Can I show your planner in my portfolio?',
-        type: 'radio',
+        name: 'navigation',
+        label: 'Navigation',
+        type: 'cards',
         required: true,
-        options: ['Yes', 'Yes, after my launch date', 'No'],
-        showIf: ({ license }) => license === 'commercial',
+        options: [
+          { value: 'Tabless', detail: 'Clean pages with links built into the layout. More room to write.', tag: 'My specialty' },
+          { value: 'With tabs', detail: 'Classic hyperlinked tabs along the edge of every page.' },
+        ],
       },
-      { name: 'launchDate', label: 'Your launch date', type: 'text', showIf: ({ license, values }) => license === 'commercial' && values.portfolio === 'Yes, after my launch date' },
-      { name: 'portfolioOptOut', label: "I'd rather you didn't show my planner in your portfolio", type: 'checkboxes', options: ['Keep it private'], showIf: ({ license }) => license === 'personal' },
+      { name: 'tabs', label: 'Where should the tabs go?', type: 'pills', required: true, options: ['Side', 'Top', 'Bottom'], showIf: ({ values }) => values.navigation === 'With tabs' },
+      { name: 'paperStyles', label: 'Paper for notes pages', hint: 'pick any', type: 'pills', multi: true, options: ['Lined', 'Dot grid', 'Grid', 'Blank', 'Cornell', 'Checklist'] },
+      {
+        name: 'stickerFormat',
+        label: 'Sticker format',
+        type: 'pills',
+        options: ['GoodNotes', 'PNG'],
+        showIf: (ctx) => (ctx.tier === 'premium' || has('sticker_set')(ctx)) && !has('sticker_both')(ctx),
+      },
+      { name: 'templates', label: 'Your custom templates', type: 'textarea', extra: true, tag: 'Premium', optional: true, help: 'Premium includes 12–15. List any you already know you want, or leave it to me.', showIf: ({ tier }) => tier === 'premium' },
+      { name: 'extraPages', label: 'Your extra pages', type: 'textarea', extra: true, help: 'What should your extra pages be?', placeholder: 'e.g. 5 meal planning pages and 5 budget pages', showIf: has('extra_pages') },
+      { name: 'extraTemplate', label: 'Your extra template', type: 'textarea', extra: true, help: 'Describe the template you added.', showIf: has('extra_template') },
+      { name: 'externalLinks', label: 'Your links', type: 'textarea', extra: true, help: 'Up to 10 websites or Apple Shortcuts. One per line, with a label.', showIf: has('link_pack') },
+      { name: 'calendarApp', label: 'Calendar for your add-to-calendar links', type: 'pills', extra: true, options: ['Google Calendar', 'Apple Calendar'], showIf: has('calendar_links') },
+    ],
+  },
+  {
+    key: 'look',
+    title: 'Look and feel',
+    fields: [
+      { name: 'colors', label: 'Colors', type: 'text', placeholder: 'A mood, like muted sage and cream, or hex codes', showIf: isPersonal },
+      { name: 'fonts', label: 'Fonts', type: 'pills', options: ['Classic serif', 'Clean sans-serif', 'Script accents', 'Handwritten', 'Surprise me'], showIf: isPersonal },
+      { name: 'feel', label: 'Three words for how it should feel', type: 'text', placeholder: 'Calm, airy, organized' },
+      { name: 'cover', label: 'Cover text', type: 'text', optional: true, placeholder: 'A name, a title, a quote' },
+    ],
+  },
+  {
+    key: 'inspo',
+    title: 'Inspiration',
+    note: `Planners, Pinterest saves, colors you love. Screenshots are perfect. Up to ${MAX_INSPIRATION}.`,
+    fields: [{ name: 'inspiration', label: 'Inspiration images', type: 'images', max: MAX_INSPIRATION, hideLabel: true }],
+  },
+  {
+    key: 'words',
+    title: 'In your own words',
+    optional: true,
+    fields: [
+      { name: 'description', label: 'Describe exactly what you want', type: 'textarea', big: true, help: "A layout you have in mind, how you'll use it day to day, anything the questions above didn't cover.", placeholder: "I'd love a weekly spread with a small habit tracker on the side…" },
+      { name: 'dislikes', label: "Anything you don't want", type: 'textarea', placeholder: 'e.g. no florals, nothing too bright' },
+      { name: 'portfolioOptOut', label: 'Keep my planner private', type: 'check', help: "I won't show it in my portfolio.", showIf: isPersonal },
+      { name: 'portfolio', label: 'Can I show your planner in my portfolio?', type: 'pills', required: true, options: ['Yes', 'After my launch', 'No'], showIf: isCommercial },
+      { name: 'launchDate', label: 'Your launch date', type: 'text', placeholder: 'e.g. March 2027', showIf: ({ license, values }) => license === 'commercial' && values.portfolio === 'After my launch' },
     ],
   },
 ];
@@ -147,6 +176,16 @@ export function visibleSections(ctx) {
     .map((section) => ({ ...section, fields: section.fields.filter((f) => !f.showIf || f.showIf(ctx)) }))
     .filter((section) => section.fields.length > 0);
 }
+
+// Labels for answers from the earlier version of the brief, so old briefs still read properly
+export const LEGACY_LABELS = {
+  monthly: 'Monthly view',
+  weekly: 'Weekly view',
+  daily: 'Daily view',
+  sections: 'Sections',
+  customSection: 'Custom section',
+  portfolioOptOut: 'Keep private',
+};
 
 // ---------------------------------------------------------------
 // Version 2

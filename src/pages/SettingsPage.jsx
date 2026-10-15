@@ -11,7 +11,12 @@ function DeviceNotifications({ email, isAdmin }) {
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    currentSubscription().then((s) => setOn(Boolean(s) && Notification.permission === 'granted'));
+    currentSubscription().then((s) => {
+      const active = Boolean(s) && Notification.permission === 'granted';
+      setOn(active);
+      // Make sure this device is on file, in case an earlier save didn't go through
+      if (active) enablePush(email, isAdmin).catch(() => {});
+    });
   }, []);
 
   async function toggle() {
@@ -54,6 +59,34 @@ function DeviceNotifications({ email, isAdmin }) {
       <button type="button" className={`switch${on ? ' switch--on' : ''}`} role="switch" aria-checked={on} onClick={toggle} disabled={busy}>
         <span />
       </button>
+    </div>
+  );
+}
+
+function TestPush() {
+  const [state, setState] = useState('');
+  async function run() {
+    setState('Sending…');
+    const { data, error } = await supabase.functions.invoke('portal-notify', { body: { event: 'test' } });
+    if (error) return setState(`Couldn't reach the notification service: ${errorText(error)}`);
+    let info = {};
+    try {
+      info = JSON.parse(data?.push?.text || '{}');
+    } catch {
+      /* not JSON */
+    }
+    if (data?.push?.status && data.push.status >= 300) return setState(`The push service answered ${data.push.status}: ${data.push.text}`);
+    if (info.skipped) return setState(`Not sent: ${info.skipped}.`);
+    if (info.devices === 0) return setState('No devices are signed up yet. Turn on notifications above first.');
+    setState(`Sent to ${info.sent} of ${info.devices} device${info.devices === 1 ? '' : 's'}. It should pop up in a few seconds.`);
+  }
+  return (
+    <div className="setting">
+      <div>
+        <p className="setting-name">Test notifications</p>
+        <p className="muted small">{state || 'Sends a test to every device you have notifications on.'}</p>
+      </div>
+      <button type="button" className="btn btn--ghost btn--sm" onClick={run}>Send test</button>
     </div>
   );
 }
@@ -130,6 +163,7 @@ export default function SettingsPage({ email, isAdmin }) {
 
       <p className="label muted section-gap">Notifications</p>
       <DeviceNotifications email={email} isAdmin={isAdmin} />
+      {isAdmin && <TestPush />}
       {!isAdmin && (
         <>
           <div className="setting">

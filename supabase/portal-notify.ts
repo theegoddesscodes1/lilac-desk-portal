@@ -7,14 +7,14 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const env = (key: string) => Deno.env.get(key) ?? "";
-const PORTAL_URL = env("PORTAL_URL") || "https://orders.lilacdesk.com";
+const PORTAL_URL = (env("PORTAL_URL") || "https://orders.lilacdesk.com").replace(/\/+$/, "");
 const MESSAGE_COOLDOWN_MS = 10 * 60 * 1000;
 
-const ALLOWED_ORIGINS = [PORTAL_URL, ...env("EXTRA_ORIGINS").split(",").map((o) => o.trim()).filter(Boolean)];
+// Every call needs a signed-in session, so any origin may call it
+// (a strict origin list silently blocked calls when the URL didn't match exactly)
 function corsFor(req: Request) {
-  const origin = req.headers.get("Origin") ?? "";
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : PORTAL_URL,
+    "Access-Control-Allow-Origin": req.headers.get("Origin") || "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
@@ -37,13 +37,17 @@ const PUSH: Record<string, (o: any, toCustomer: boolean) => { title: string; bod
 
 async function push(to: "admin" | "customer", email: string | null, title: string, body: string, url: string) {
   try {
-    await fetch(`${env("SUPABASE_URL")}/functions/v1/portal-push`, {
+    const res = await fetch(`${env("SUPABASE_URL")}/functions/v1/portal-push`, {
       method: "POST",
       headers: { Authorization: `Bearer ${env("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
       body: JSON.stringify({ to, email, title, body, url }),
     });
+    const text = await res.text();
+    console.log(`portal-notify: push ${res.status} ${text}`);
+    return { status: res.status, text };
   } catch (err) {
-    console.error("Push failed", err);
+    console.error("portal-notify: push failed", err);
+    return { error: String(err) };
   }
 }
 
@@ -119,23 +123,46 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
-  const { data: userData } = await userClient.auth.getUser();
-  if (!userData?.user) return reply({ error: "Not signed in" }, 401);
+  const { data: userData, error: userError } = await userClient.auth.getUser();
+  if (!userData?.user) {
+    console.log("portal-notify: not signed in", userError?.message ?? "");
+    return reply({ error: "Not signed in" }, 401);
+  }
 
   const { order_id, event } = await req.json().catch(() => ({}));
+  console.log(`portal-notify: ${event} from ${userData.user.email} for ${order_id ?? "no order"}`);
+
+  // "Send a test notification" button in Kerry's settings
+  if (event === "test") {
+    const { data: admin } = await userClient.rpc("is_admin");
+    if (!admin) return reply({ error: "Not allowed" }, 403);
+    const result = await push("admin", null, "Test notification", "Notifications are working on this device.", "/notifications");
+    console.log("portal-notify: test push result", JSON.stringify(result));
+    return reply({ sent: true, push: result });
+  }
   const def = EVENTS[event as string];
-  if (!order_id || !def) return reply({ error: "Unknown event" }, 400);
+  if (!order_id || !def) {
+    console.log("portal-notify: unknown event");
+    return reply({ error: "Unknown event" }, 400);
+  }
 
   // Reading through the user's own session means security rules decide access
   const { data: order } = await userClient.from("orders").select("*").eq("id", order_id).maybeSingle();
-  if (!order) return reply({ error: "Order not found" }, 404);
+  if (!order) {
+    console.log("portal-notify: order not visible to this user");
+    return reply({ error: "Order not found" }, 404);
+  }
 
   const { data: isAdmin } = await userClient.rpc("is_admin");
   const to: Recipient = def.to === "other" ? (isAdmin ? "customer" : "admin") : def.to;
 
   // Customers can only notify Kerry, and Kerry can only notify customers
+  console.log(`portal-notify: sending to ${to}`);
   if (to === "customer" && !isAdmin) return reply({ error: "Not allowed" }, 403);
-  if (to === "admin" && isAdmin) return reply({ skipped: true });
+  if (to === "admin" && isAdmin) {
+    console.log("portal-notify: skipped, admin acting on own order");
+    return reply({ skipped: true });
+  }
 
   const service = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false },
@@ -167,7 +194,10 @@ Deno.serve(async (req) => {
   }
 
   const key = env("RESEND_API_KEY");
-  if (!key || recipients.length === 0) return reply({ skipped: "email not configured" });
+  if (!key || recipients.length === 0) {
+    console.log("portal-notify: email skipped, RESEND_API_KEY or ADMIN_EMAIL missing");
+    return reply({ skipped: "email not configured" });
+  }
 
   const subject = `${def.subject} (${order.shopify_order_name ?? "custom planner"})`;
   const res = await fetch("https://api.resend.com/emails", {
@@ -180,7 +210,12 @@ Deno.serve(async (req) => {
       html: emailLayout(def.heading, def.body, `${PORTAL_URL}/orders/${order.id}`),
     }),
   });
-  if (!res.ok) return reply({ error: await res.text() }, 502);
+  if (!res.ok) {
+    const detail = await res.text();
+    console.error("portal-notify: email failed", res.status, detail);
+    return reply({ error: detail }, 502);
+  }
+  console.log(`portal-notify: email sent to ${recipients.length} address(es)`);
 
   await service.from("orders").update({ [column]: new Date().toISOString() }).eq("id", order.id);
 

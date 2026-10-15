@@ -147,14 +147,23 @@ export function CustomerHome() {
 // ---------- Brief ----------
 
 export function CustomerBrief() {
-  const { loading, error, order } = useOrder();
+  const { loading, error, order, orderAddons, reload } = useOrder();
   if (loading || error) return <Loading error={error} />;
+  if (order.brief_submitted_at) {
+    return (
+      <main className="page page--narrow">
+        <Link to={`/orders/${order.id}`} className="back-link"><Icon name="back" size={16} /> Home</Link>
+        <p className="label muted">Order {order.shopify_order_name} · {plannerLabel(order)}</p>
+        <h1 className="h-page">Your brief</h1>
+        <p className="muted small">Submitted {formatDate(order.brief_submitted_at)}. Need to add something? Send me a message.</p>
+        <BriefForm order={order} orderAddons={orderAddons} readOnly />
+      </main>
+    );
+  }
   return (
-    <main className="page page--narrow">
+    <main className="page page--brief">
       <Link to={`/orders/${order.id}`} className="back-link"><Icon name="back" size={16} /> Home</Link>
-      <p className="label muted">Order {order.shopify_order_name} · {plannerLabel(order)}</p>
-      <h1 className="h-page">Your brief</h1>
-      <BriefForm order={order} readOnly={Boolean(order.brief_submitted_at)} />
+      <BriefForm order={order} orderAddons={orderAddons} onSubmitted={reload} />
     </main>
   );
 }

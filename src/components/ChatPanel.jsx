@@ -19,6 +19,8 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
   const listRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Status lines ("Brief submitted…") are written for the customer; Kerry doesn't need them
+  const shown = viewer === 'admin' ? messages.filter((m) => m.sender !== 'system') : messages;
   const filesById = useMemo(() => Object.fromEntries((files ?? []).map((f) => [f.id, f])), [files]);
   const otherSide = viewer === 'admin' ? 'customer' : 'admin';
   const unread = messages.some((m) => m.sender === otherSide && !m.read_at);
@@ -62,8 +64,8 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
   return (
     <div className="chat">
       <div className="chat-list" ref={listRef}>
-        {messages.length === 0 && <p className="muted chat-empty">No messages yet. Ask anything about your planner here.</p>}
-        {messages.map((m) => {
+        {shown.length === 0 && <p className="muted chat-empty">{viewer === 'admin' ? 'No messages yet. Say hello below.' : 'No messages yet. Ask anything about your planner here.'}</p>}
+        {shown.map((m) => {
           if (m.sender === 'system') {
             return <p key={m.id} className="msg-sys">{m.body}</p>;
           }
