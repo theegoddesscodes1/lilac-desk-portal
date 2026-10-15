@@ -25,36 +25,42 @@ function availableAddons(order, addons, orderAddons) {
   });
 }
 
-// Posts to Shopify's cart with a hidden property linking the add-on to this order
-function buy(order, addon) {
-  const variant = order.license === 'personal' ? addon.personal_variant_id : addon.commercial_variant_id;
+// Sends every picked extra to Shopify's cart in one go, each tagged with this order, then opens checkout
+function checkout(order, picked) {
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = `${SHOP_URL}/cart/add`;
-  const fields = {
-    id: String(variant),
-    quantity: '1',
-    'properties[_portal_order]': order.id,
-    'properties[Planner order]': order.shopify_order_name || '',
-    return_to: '/checkout',
-  };
-  for (const [name, value] of Object.entries(fields)) {
+  const add = (name, value) => {
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = name;
     input.value = value;
     form.appendChild(input);
+  };
+  for (const addon of picked) {
+    const variant = order.license === 'personal' ? addon.personal_variant_id : addon.commercial_variant_id;
+    add('items[][id]', String(variant));
+    add('items[][quantity]', '1');
+    add('items[][properties][_portal_order]', order.id);
+    add('items[][properties][Planner order]', order.shopify_order_name || '');
   }
+  add('return_to', '/checkout');
   document.body.appendChild(form);
   form.submit();
 }
 
+const toNumber = (price) => Number(String(price ?? '').replace(/[^0-9.]/g, '')) || 0;
+
 export default function AddExtras({ order, addons, orderAddons }) {
   const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState([]);
   if (LOCKED_STAGES.includes(order.stage)) return null;
   const list = availableAddons(order, addons, orderAddons);
   if (list.length === 0 && orderAddons.length === 0) return null;
   const price = (a) => (order.license === 'personal' ? a.personal_price : a.commercial_price);
+  const isPicked = (a) => picked.some((p) => p.key === a.key);
+  const toggle = (a) => setPicked((cur) => (isPicked(a) ? cur.filter((p) => p.key !== a.key) : [...cur, a]));
+  const total = picked.reduce((n, a) => n + toNumber(price(a)), 0);
 
   return (
     <section className={`extras${open ? ' extras--open' : ''}`} aria-label="Add extras">
@@ -82,22 +88,35 @@ export default function AddExtras({ order, addons, orderAddons }) {
             return (
               <div key={group.title} className="extras-group">
                 <p className="label muted">{group.title}</p>
-                {rows.map((addon) => (
-                  <div key={addon.key} className="extras-row">
-                    <div>
-                      <p className="extras-name">{addon.name}</p>
-                      {addon.description && <p className="muted small">{addon.description}</p>}
+                {rows.map((addon) => {
+                  const on = isPicked(addon);
+                  return (
+                    <div key={addon.key} className={`extras-row${on ? ' extras-row--on' : ''}`}>
+                      <div>
+                        <p className="extras-name">{addon.name}</p>
+                        {addon.description && <p className="muted small">{addon.description}</p>}
+                      </div>
+                      <span className="extras-price">{price(addon)}</span>
+                      <button type="button" aria-pressed={on} className={`btn btn--sm ${on ? 'btn--ghost btn--active' : 'btn--ghost'}`} onClick={() => toggle(addon)}>
+                        {on ? <><Icon name="check" size={13} /> Added</> : 'Add'}
+                      </button>
                     </div>
-                    <span className="extras-price">{price(addon)}</span>
-                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => buy(order, addon)}>
-                      Add
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
-          <p className="muted small extras-foot">You'll check out on lilacdesk.com. Extras appear here once payment goes through.</p>
+          {picked.length > 0 ? (
+            <div className="extras-cart">
+              <span>
+                <b>{picked.length} {picked.length === 1 ? 'extra' : 'extras'}</b>
+                <span className="muted small"> · ${total % 1 ? total.toFixed(2) : total}</span>
+              </span>
+              <button type="button" className="btn btn--ox btn--sm" onClick={() => checkout(order, picked)}>Check out</button>
+            </div>
+          ) : (
+            <p className="muted small extras-foot">Pick as many as you like, then check out once on lilacdesk.com. Extras show up here once payment goes through.</p>
+          )}
         </div>
       )}
     </section>

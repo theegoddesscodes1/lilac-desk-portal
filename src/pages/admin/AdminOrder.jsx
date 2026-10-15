@@ -37,6 +37,9 @@ export default function AdminOrder() {
   const name = order.customer_name || order.customer_email;
   const first = name.split(' ')[0];
   const rounds = proofRounds(files, messages);
+  // The one action that moves this order forward gets the filled button
+  const primary = ['brief_received', 'designing', 'revisions'].includes(order.stage) ? 'proof' : order.stage === 'approved' ? 'final' : null;
+  const unreadCount = messages.filter((m) => m.sender === 'customer' && !m.read_at).length;
   const latest = rounds[0];
   const approvedNo = approvedProofNumber(messages);
   const lastMsg = [...messages].reverse().find((m) => m.sender !== 'system');
@@ -50,7 +53,7 @@ export default function AdminOrder() {
     { key: 'overview', label: 'Overview' },
     { key: 'files', label: 'Files', count: files.length },
     { key: 'brief', label: 'Brief' },
-    { key: 'messages', label: 'Messages', count: messages.filter((m) => m.sender !== 'system').length },
+    { key: 'messages', label: 'Messages', count: unreadCount, dot: true },
   ];
 
   return (
@@ -76,7 +79,7 @@ export default function AdminOrder() {
           <div className="tabs" role="tablist">
             {tabs.map((t) => (
               <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} onClick={() => setTab(t.key)}>
-                {t.label}{t.count ? <span className="muted"> {t.count}</span> : null}
+                {t.label}{t.count ? (t.dot ? <span className="badge tab-badge">{t.count}</span> : <span className="muted"> {t.count}</span>) : null}
               </button>
             ))}
           </div>
@@ -87,9 +90,21 @@ export default function AdminOrder() {
                 <p className="label muted">Next step</p>
                 <p className="lead lead--it">{NEXT[order.stage]?.(first, approvedNo)}</p>
                 <div className="btn-row btn-row--three">
-                  <button type="button" className={`btn btn--sm ${panel === 'proof' ? '' : 'btn--ox'}`} onClick={() => setPanel(panel === 'proof' ? '' : 'proof')}>Upload proof</button>
-                  <button type="button" className="btn btn--sm btn--ghost" onClick={() => setPanel(panel === 'final' ? '' : 'final')}>Upload final</button>
-                  <button type="button" className="btn btn--sm btn--ghost" onClick={() => setPanel(panel === 'stage' ? '' : 'stage')}>Change stage</button>
+                  {[
+                    { key: 'proof', label: 'Upload proof' },
+                    { key: 'final', label: 'Upload final' },
+                    { key: 'stage', label: 'Change stage' },
+                  ].map((a) => (
+                    <button
+                      key={a.key}
+                      type="button"
+                      aria-pressed={panel === a.key}
+                      className={`btn btn--sm ${panel === a.key ? 'btn--ghost btn--active' : a.key === primary ? 'btn--ox' : 'btn--ghost'}`}
+                      onClick={() => setPanel(panel === a.key ? '' : a.key)}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
                 </div>
                 {panel === 'proof' && <div className="panel-box"><Uploader order={order} files={files} defaultKind="proof" key="proof" onDone={() => setPanel('')} /></div>}
                 {panel === 'final' && <div className="panel-box"><Uploader order={order} files={files} defaultKind="final" key="final" onDone={() => setPanel('')} /></div>}

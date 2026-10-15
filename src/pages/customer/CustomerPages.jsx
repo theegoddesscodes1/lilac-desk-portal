@@ -117,6 +117,12 @@ export function CustomerHome() {
               <Link to={`${base}/messages`} className="small"><u>Reply</u></Link>
             </div>
           )}
+          {order.brief_submitted_at && (
+            <Link to={`${base}/brief`} className="mini-row home-brief">
+              <span>Your brief<small>Submitted {shortDate(order.brief_submitted_at)}</small></span>
+              <span className="small"><u>View</u></span>
+            </Link>
+          )}
           <AddExtras order={order} addons={addons} orderAddons={orderAddons} />
 
           {otherActive.length > 0 && (
