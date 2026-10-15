@@ -34,6 +34,7 @@ export const TIERS = {
   basic: { label: 'Basic', days: 7, revisions: 2 },
   standard: { label: 'Standard', days: 12, revisions: 3 },
   premium: { label: 'Premium', days: 21, revisions: 4 },
+  custom: { label: 'Custom', days: null, revisions: 3 },
 };
 
 export const LICENSES = { personal: 'Personal', commercial: 'Commercial' };
@@ -131,8 +132,9 @@ export const BRIEF_SECTIONS = [
         label: 'Sticker format',
         type: 'pills',
         options: ['GoodNotes', 'PNG'],
-        showIf: (ctx) => (ctx.tier === 'premium' || has('sticker_set')(ctx)) && !has('sticker_both')(ctx),
+        showIf: (ctx) => (['premium', 'custom'].includes(ctx.tier) || has('sticker_set')(ctx)) && !has('sticker_both')(ctx),
       },
+      { name: 'customPages', label: 'Pages and sections', type: 'textarea', extra: true, tag: 'Custom', optional: true, help: 'Anything from our quote you want to spell out, or anything you thought of since.', showIf: ({ tier }) => tier === 'custom' },
       { name: 'templates', label: 'Your custom templates', type: 'textarea', extra: true, tag: 'Premium', optional: true, help: 'Premium includes 12–15. List any you already know you want, or leave it to me.', showIf: ({ tier }) => tier === 'premium' },
       { name: 'extraPages', label: 'Your extra pages', type: 'textarea', extra: true, help: 'What should your extra pages be?', placeholder: 'e.g. 5 meal planning pages and 5 budget pages', showIf: has('extra_pages') },
       { name: 'extraTemplate', label: 'Your extra template', type: 'textarea', extra: true, help: 'Describe the template you added.', showIf: has('extra_template') },

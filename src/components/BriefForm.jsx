@@ -336,6 +336,12 @@ export default function BriefForm({ order, orderAddons = [], readOnly = false, o
         <div className="bf-step"><span>{savedText(savedAt) || 'Your brief'}</span><span>{doneCount} of {sections.length}</span></div>
         <p className="label ox">Order {order.shopify_order_name} · {plannerLabel(order)}</p>
         <h1 className="h-page bf-title">Tell me about your planner</h1>
+        {order.scope_note && (
+          <div className="scope">
+            <p className="label muted">What we agreed</p>
+            <p>{order.scope_note}</p>
+          </div>
+        )}
         <p className="bf-intro">Just the essentials. Anything you'd rather explain yourself goes in the last section. Your delivery countdown starts when you submit.</p>
 
         {sections.map((section, i) => {

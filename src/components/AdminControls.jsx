@@ -91,7 +91,15 @@ export function DueAndRevisions({ order }) {
       })
       .eq('id', order.id);
     setMsg(error ? errorText(error) : 'Saved.');
-    if (!error) refreshAll();
+    if (!error) {
+      // First due date on an order (custom orders): let the customer know
+      if (!order.due_at && due) {
+        const when = new Date(due).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+        await supabase.from('messages').insert({ order_id: order.id, sender: 'system', body: `Your delivery date is set: ${when}.` });
+        notify(order.id, 'stage');
+      }
+      refreshAll();
+    }
   }
 
   return (

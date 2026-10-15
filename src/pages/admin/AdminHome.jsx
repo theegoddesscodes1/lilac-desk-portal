@@ -10,7 +10,7 @@ export const shortPlanner = (o) => `${TIERS[o.tier]?.label ?? o.tier} ${LICENSES
 
 export function dueText(o) {
   const d = daysUntil(o.due_at);
-  if (d == null) return '';
+  if (d == null) return o.tier === 'custom' && o.brief_submitted_at ? 'needs a due date' : '';
   if (d < 0) return `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} overdue`;
   if (d === 0) return 'due today';
   return `due in ${d} ${d === 1 ? 'day' : 'days'}`;

@@ -62,6 +62,16 @@ function useMinuteTick() {
 // "Estimated delivery   Wed, Oct 21 · 6 days" with a slim progress line
 export function DeliveryLine({ order, long = false }) {
   useMinuteTick();
+  if (order.tier === 'custom' && !order.due_at && COUNTDOWN_STAGES.includes(order.stage)) {
+    return (
+      <div className="delivery">
+        <div className="kv">
+          <span className="label">Estimated delivery</span>
+          <span className="muted small">Confirming soon</span>
+        </div>
+      </div>
+    );
+  }
   if (!order.due_at || !COUNTDOWN_STAGES.includes(order.stage)) return null;
   const due = new Date(order.due_at);
   const start = new Date(order.brief_submitted_at || order.created_at);

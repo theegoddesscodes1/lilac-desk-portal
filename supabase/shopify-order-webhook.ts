@@ -15,11 +15,15 @@ const db = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
 const PORTAL_URL = env("PORTAL_URL") || "https://orders.lilacdesk.com";
 const PERSONAL_PRODUCT_ID = env("SHOPIFY_PERSONAL_PRODUCT_ID");
 const COMMERCIAL_PRODUCT_ID = env("SHOPIFY_COMMERCIAL_PRODUCT_ID");
+// Hidden "Custom Planner" product used on Shopify invoices; its variants are named Personal and Commercial
+const CUSTOM_PRODUCT_ID = env("SHOPIFY_CUSTOM_PRODUCT_ID");
 
 const TIERS: Record<string, { label: string; days: number; revisions: number }> = {
   basic: { label: "Basic", days: 7, revisions: 2 },
   standard: { label: "Standard", days: 12, revisions: 3 },
   premium: { label: "Premium", days: 21, revisions: 4 },
+  // Custom: you set the due date on the order page; rounds start at 3 and can be changed there
+  custom: { label: "Custom", days: 0, revisions: 3 },
 };
 
 const OPEN_STAGES = ["order_placed", "brief_received", "designing", "proof_ready", "revisions", "approved"];
@@ -175,13 +179,16 @@ Deno.serve(async (req) => {
   const plannerRows: any[] = [];
   for (const item of lineItems) {
     const productId = String(item.product_id ?? "");
+    const variantName = String(item.variant_title ?? "").trim().toLowerCase();
+    const isCustom = Boolean(productId && productId === CUSTOM_PRODUCT_ID);
     const license =
       productId && productId === PERSONAL_PRODUCT_ID ? "personal"
       : productId && productId === COMMERCIAL_PRODUCT_ID ? "commercial"
+      : isCustom ? (variantName.includes("commercial") ? "commercial" : "personal")
       : null;
     if (!license) continue;
 
-    const tierKey = String(item.variant_title ?? "").trim().toLowerCase();
+    const tierKey = isCustom ? "custom" : variantName;
     const tier = TIERS[tierKey];
     if (!tier) {
       console.error(`Unknown tier "${item.variant_title}" on line item ${item.id}`);
@@ -199,6 +206,7 @@ Deno.serve(async (req) => {
         license,
         tier: tierKey,
         revisions_included: tier.revisions,
+        ...(isCustom && shopOrder.note ? { scope_note: String(shopOrder.note).slice(0, 4000) } : {}),
         planner_price: Math.round((linePaid(item) / (Number(item.quantity ?? 1) || 1)) * 100) / 100,
       });
     }
@@ -324,7 +332,7 @@ Deno.serve(async (req) => {
         .update({ revisions_included: target.revisions_included + quantity })
         .eq("id", target.id);
     }
-    if (addon.key === "rush" && target.brief_submitted_at) {
+    if (addon.key === "rush" && target.brief_submitted_at && TIERS[target.tier]?.days) {
       const days = Math.ceil(TIERS[target.tier].days / 2);
       const due = new Date(new Date(target.brief_submitted_at).getTime() + days * 86400000);
       await db.from("orders").update({ due_at: due.toISOString() }).eq("id", target.id);

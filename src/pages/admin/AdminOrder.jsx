@@ -157,6 +157,12 @@ export default function AdminOrder() {
             {order.due_at && !['delivered', 'complete', 'closed'].includes(order.stage) && ` · ${dueText(order)} (${shortDate(order.due_at)})`}
             {` · ${order.revisions_used} of ${order.revisions_included} change rounds used`}
           </p>
+          {order.scope_note && (
+            <div className="scope">
+              <p className="label muted">What you agreed</p>
+              <p>{order.scope_note}</p>
+            </div>
+          )}
           {flag && <p className="flag-note">No response for {quiet} days. Under your policy this order can be closed.</p>}
 
           <div className="tabs" role="tablist">
@@ -170,6 +176,11 @@ export default function AdminOrder() {
           {tab === 'overview' && (
             <div className="ov">
               <p className="lead lead--it ov-next">{NEXT[order.stage]?.(first, approvedNo)}</p>
+              {order.tier === 'custom' && order.brief_submitted_at && !order.due_at && (
+                <button type="button" className="due-prompt" onClick={() => setPanel('stage')}>
+                  <b>Set the due date</b> · Custom order: {first} sees “confirming soon” until you do.
+                </button>
+              )}
 
               <ol className="steps">
                 {steps.map((s) => (

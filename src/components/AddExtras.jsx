@@ -17,7 +17,7 @@ function availableAddons(order, addons, orderAddons) {
     const variant = order.license === 'personal' ? a.personal_variant_id : a.commercial_variant_id;
     if (!variant) return false;
     if (a.commercial_only && order.license !== 'commercial') return false;
-    if (a.tiers && !a.tiers.includes(order.tier)) return false;
+    if (a.tiers && order.tier !== 'custom' && !a.tiers.includes(order.tier)) return false;
     if (a.dated_only && !dated) return false;
     if (owned.has(a.key) && !REPEATABLE_ADDONS.includes(a.key)) return false;
     if (a.key === 'sticker_both' && !hasStickers) return false;

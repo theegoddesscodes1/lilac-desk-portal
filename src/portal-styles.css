@@ -851,3 +851,9 @@ button.log-row:hover .log-text > span { color: var(--oxblood); }
 .up-progress span { position: relative; z-index: 1; }
 .up-progress i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--lilac); transition: width 0.3s; }
 .step .panel-box { padding: 2px 14px; }
+
+/* Custom orders */
+.scope { border-left: 2px solid var(--oxblood); background: #fff; padding: 10px 14px; margin: 14px 0; }
+.scope p:last-child { margin: 0; white-space: pre-wrap; font-size: 14px; }
+.due-prompt { display: block; width: 100%; text-align: left; margin: -4px 0 16px; padding: 10px 12px; border: 1px dashed var(--oxblood); background: rgba(92, 24, 30, 0.04); color: var(--charcoal); font: inherit; font-size: 13px; cursor: pointer; }
+.due-prompt b { color: var(--oxblood); font-weight: 500; }
