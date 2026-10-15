@@ -1,0 +1,27 @@
+# Pings the portal database every 3 days so Supabase's free plan never pauses it.
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL       https://YOUR-PROJECT.supabase.co
+#   SUPABASE_ANON_KEY  the anon public key
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "17 13 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the keepalive function
+        run: |
+          status=$(curl -s -o response.txt -w "%{http_code}" -X POST \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/keepalive" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" -d '{}')
+          cat response.txt; echo
+          if [ "$status" != "200" ]; then
+            echo "Keep-alive failed with HTTP $status. If the project is paused, resume it in the Supabase dashboard."
+            exit 1
+          fi
