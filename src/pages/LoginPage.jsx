@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { errorText } from '../lib/orderApi';
 
-export default function LoginPage() {
+export default function LoginPage({ notice = '' }) {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
@@ -40,6 +40,7 @@ export default function LoginPage() {
       <div className="login-card">
         <p className="wordmark">Lilac Desk</p>
         <h1 className="h-page">Your order page</h1>
+        {notice && !sent && <p className="error">{notice}</p>}
 
         {!sent ? (
           <form onSubmit={sendLink}>

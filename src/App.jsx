@@ -26,14 +26,45 @@ function Shell({ email, isAdmin, children }) {
   );
 }
 
+// Only allow in-portal paths like /orders/abc after a one-click sign-in
+function safeNext(value) {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
+}
+
 export default function App() {
   const [session, setSession] = useState(undefined);
   const [isAdmin, setIsAdmin] = useState(null);
+  const [linkChecking, setLinkChecking] = useState(() => window.location.pathname === '/welcome');
+  const [linkNotice, setLinkNotice] = useState('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => data.subscription.unsubscribe();
+  }, []);
+
+  // One-click link from the order email: /welcome?token_hash=…&type=…&next=/orders/…
+  useEffect(() => {
+    if (window.location.pathname !== '/welcome') return;
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+    const type = params.get('type') || 'magiclink';
+    const next = safeNext(params.get('next'));
+    if (!tokenHash) {
+      window.history.replaceState({}, '', next);
+      setLinkChecking(false);
+      return;
+    }
+    supabase.auth.verifyOtp({ token_hash: tokenHash, type }).then(async ({ error }) => {
+      if (error) {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          setLinkNotice('That sign-in link has expired or was already used. Enter your email and I\u2019ll send a new one.');
+        }
+      }
+      window.history.replaceState({}, '', next);
+      setLinkChecking(false);
+    });
   }, []);
 
   const userId = session?.user?.id;
@@ -45,8 +76,8 @@ export default function App() {
     supabase.rpc('is_admin').then(({ data }) => setIsAdmin(Boolean(data)));
   }, [userId]);
 
-  if (session === undefined) return <p className="muted page-pad">Loading</p>;
-  if (!session) return <LoginPage />;
+  if (session === undefined || linkChecking) return <p className="muted page-pad">Opening your order</p>;
+  if (!session) return <LoginPage notice={linkNotice} />;
   if (isAdmin === null) return <p className="muted page-pad">Loading</p>;
 
   const email = session.user.email;

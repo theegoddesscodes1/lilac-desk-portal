@@ -60,9 +60,9 @@ function emailLayout(heading: string, body: string, buttonLabel: string, buttonU
   <div style="background:#FAFAF8;padding:40px 20px;font-family:Helvetica,Arial,sans-serif;color:#333333;">
     <div style="max-width:520px;margin:0 auto;">
       <p style="font-family:'Times New Roman',Times,serif;font-size:20px;letter-spacing:4px;text-transform:uppercase;margin:0 0 28px;">Lilac Desk</p>
-      <h1 style="font-family:'Times New Roman',Times,serif;font-weight:400;font-size:28px;line-height:1.2;margin:0 0 16px;">${heading}</h1>
+      <h1 style="font-family:'Times New Roman',Times,serif;font-weight:400;font-size:24px;line-height:1.25;margin:0 0 16px;">${heading}</h1>
       <div style="font-size:15px;line-height:1.6;margin:0 0 28px;">${body}</div>
-      <a href="${buttonUrl}" style="display:inline-block;background:#333333;color:#FAFAF8;text-decoration:none;padding:14px 28px;font-size:13px;letter-spacing:1px;text-transform:uppercase;">${buttonLabel}</a>
+      <a href="${buttonUrl}" style="display:inline-block;background:#5C181E;color:#FAFAF8;text-decoration:none;padding:14px 28px;font-size:13px;letter-spacing:1px;text-transform:uppercase;">${buttonLabel}</a>
     </div>
   </div>`;
 }
@@ -76,6 +76,20 @@ async function sendEmail(to: string, subject: string, html: string) {
     body: JSON.stringify({ from: env("EMAIL_FROM"), to, subject, html }),
   });
   if (!res.ok) console.error("Email failed", await res.text());
+}
+
+// One-click sign-in straight to an order page. The portal's /welcome route
+// exchanges the token for a session, so the customer lands on their brief.
+async function signInLink(email: string, orderId: string) {
+  const next = `/orders/${orderId}`;
+  const { data, error } = await db.auth.admin.generateLink({ type: "magiclink", email });
+  const hashed = data?.properties?.hashed_token;
+  if (error || !hashed) {
+    console.error("Sign-in link failed", error);
+    return `${PORTAL_URL}${next}`;
+  }
+  const type = data.properties.verification_type || "magiclink";
+  return `${PORTAL_URL}/welcome?token_hash=${encodeURIComponent(hashed)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`;
 }
 
 async function systemMessage(orderId: string, body: string) {
@@ -151,15 +165,17 @@ Deno.serve(async (req) => {
       const tier = TIERS[order.tier];
       const licenseLabel = order.license === "personal" ? "Personal" : "Commercial";
 
+      const briefLink = await signInLink(email, order.id);
       await sendEmail(
         email,
-        `Your custom planner order ${order.shopify_order_name}`,
+        `Start your brief: order ${order.shopify_order_name}`,
         emailLayout(
-          "Your order page is ready",
+          "Your brief is ready for you",
           `<p>Thank you for your order of a ${tier.label} ${licenseLabel.toLowerCase()} planner.</p>
-           <p>Your next step is the brief. Sign in with this email address to fill it in, follow your planner's progress, and message me.</p>`,
-          "Open your order page",
-          `${PORTAL_URL}/orders/${order.id}`,
+           <p>The button below signs you in and opens your brief. Your delivery countdown starts as soon as it's in.</p>
+           <p style="font-size:13px;">The button works once and expires after a day. After that, sign in at <a href="${PORTAL_URL}" style="color:#5C181E;">orders.lilacdesk.com</a> with this email address.</p>`,
+          "Start your brief",
+          briefLink,
         ),
       );
 
