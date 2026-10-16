@@ -84,10 +84,10 @@ export function threadFor(order, messages = []) {
 const AdminContext = createContext(null);
 
 export function AdminDataProvider({ children }) {
-  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [] });
+  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [], orderTags: [] });
 
   const reload = useCallback(async () => {
-    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages] = await Promise.all([
+    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages, orderTags] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('order_addons').select('*').order('created_at', { ascending: true }),
       supabase.from('messages').select('id, order_id, sender, kind, body, file_id, read_at, created_at').order('created_at', { ascending: true }),
@@ -97,9 +97,11 @@ export function AdminDataProvider({ children }) {
       supabase.from('quote_messages').select('id, quote_id, sender, kind, body, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('contacts').select('*').order('updated_at', { ascending: false }),
       supabase.from('contact_messages').select('id, contact_id, sender, body, read_at, created_at').order('created_at', { ascending: true }),
+      supabase.from('order_tags').select('*'),
     ]);
     setState({
       loading: false,
+      orderTags: orderTags.data ?? [],
       contacts: contacts.data ?? [],
       contactMessages: contactMessages.data ?? [],
       quotes: quotes.data ?? [],
@@ -128,6 +130,7 @@ export function AdminDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_messages' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_tags' }, soon)
       .subscribe(onConnected(soon));
     const stop = keepFresh(reload);
     return () => {
@@ -176,9 +179,11 @@ export function AdminDataProvider({ children }) {
         };
       })
       .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+    const tagsByOrder = Object.fromEntries(state.orderTags.map((t) => [t.order_id, t.tags || []]));
     return {
       ...state,
       reload,
+      tagsByOrder,
       contactThreads,
       addonsByOrder,
       messagesByOrder,

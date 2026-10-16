@@ -13,6 +13,7 @@ import FileList from '../../components/FileList';
 import ChatPanel from '../../components/ChatPanel';
 import Icon from '../../components/Icons';
 import { DueAndRevisions, StageControl, Uploader } from '../../components/AdminControls';
+import { OrderNotes, TagEditor } from '../../components/OrderTags';
 import { dueText } from './AdminHome';
 
 // Where the order stands, then what to do: shown as two separate lines
@@ -87,7 +88,7 @@ export default function AdminOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { loading, error, order, files, messages, orderAddons } = useOrderData(id);
-  const { orders, totalFor } = useAdmin();
+  const { orders, totalFor, tagsByOrder = {} } = useAdmin();
   const [tab, setTab] = useState('overview');
   const [panel, setPanel] = useState('');
   const [viewing, setViewing] = useState(null);
@@ -113,9 +114,10 @@ export default function AdminOrder() {
 
   const tabs = [
     { key: 'overview', label: 'Overview' },
-    { key: 'files', label: 'Files', count: files.length },
+    { key: 'files', label: 'Files' },
     { key: 'brief', label: 'Brief' },
     { key: 'messages', label: 'Messages', count: unreadCount, dot: true },
+    { key: 'notes', label: 'Notes' },
   ];
 
   const openItem = (item) => {
@@ -162,6 +164,7 @@ export default function AdminOrder() {
             <StageDot stage={order.stage} />
           </div>
           <p className="order-sub">{plannerLabel(order)}</p>
+          <TagEditor orderId={order.id} tags={tagsByOrder[order.id] || []} />
           <p className="muted small">
             Ordered {shortDate(order.created_at)}
             {order.due_at && !['delivered', 'complete', 'closed'].includes(order.stage) && ` · ${dueText(order)} (${shortDate(order.due_at)})`}
@@ -310,6 +313,12 @@ export default function AdminOrder() {
                   <BriefForm order={order} orderAddons={orderAddons} readOnly />
                 </>
               ) : <p className="muted">Not started yet.</p>}
+            </div>
+          )}
+
+          {tab === 'notes' && (
+            <div className="tab-body">
+              <OrderNotes orderId={order.id} />
             </div>
           )}
 

@@ -6,6 +6,7 @@ import { errorText, formatDate, keepFresh, onConnected, refreshAll } from '../li
 import { money } from '../lib/portalData';
 import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
+import AutoGrow from '../components/AutoGrow';
 
 const STATUS = { open: 'Talking it through', quoted: 'Quote sent', paid: 'Paid', closed: 'Closed' };
 const statusText = (q, admin) => (q.status === 'closed' && q.closed_by === 'customer' ? (admin ? 'Declined' : 'You declined') : STATUS[q.status]);
@@ -399,9 +400,8 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
             <span />
             <div className="compose-box">
               <label className="sr-only" htmlFor="quote-msg">Message</label>
-              <textarea
+              <AutoGrow
                 id="quote-msg"
-                rows={1}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 onKeyDown={(e) => {

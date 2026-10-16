@@ -5,6 +5,7 @@ import { DESIGNER_NAME } from '../portal-config';
 import { errorText, formatDate, keepFresh, onConnected, refreshAll } from '../lib/orderApi';
 import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
+import AutoGrow from '../components/AutoGrow';
 
 // Messages sent from the Contact page on lilacdesk.com
 
@@ -158,9 +159,8 @@ export function ContactThread({ admin = false, contactId, embedded = false }) {
             <span />
             <div className="compose-box">
               <label className="sr-only" htmlFor="contact-msg">Message</label>
-              <textarea
+              <AutoGrow
                 id="contact-msg"
-                rows={1}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 onKeyDown={(e) => {

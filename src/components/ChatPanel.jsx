@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DESIGNER_NAME } from '../portal-config';
 import { errorText, formatDate, notify, refreshAll, uploadOrderFile } from '../lib/orderApi';
-import { FileChip } from './FilePreview';
+import { ChatImage, FileChip, isImage } from './FilePreview';
+import AutoGrow from './AutoGrow';
 import Icon from './Icons';
 
 const KIND_LABELS = { revision_request: 'Changes requested', approval: 'Approved' };
@@ -19,6 +20,8 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
   const [error, setError] = useState('');
   const listRef = useRef(null);
   const fileInputRef = useRef(null);
+  const preview = useMemo(() => (attachment?.type?.startsWith('image/') ? URL.createObjectURL(attachment) : null), [attachment]);
+  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
 
   // Status lines ("Brief submitted…") are written for the customer; Kerry doesn't need them
   const shown = viewer === 'admin' ? messages.filter((m) => m.sender !== 'system') : messages;
@@ -72,16 +75,17 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
             return <p key={m.id} className="msg-sys">{m.body}</p>;
           }
           const file = m.file_id ? filesById[m.file_id] : null;
+          const photo = file && isImage(file);
           const mine = m.sender === viewer;
           return (
-            <div key={m.id} className={`msg ${mine ? 'msg--mine' : 'msg--theirs'}${m.kind === 'revision_request' ? ' msg--req' : ''}`}>
+            <div key={m.id} className={`msg ${mine ? 'msg--mine' : 'msg--theirs'}${m.kind === 'revision_request' ? ' msg--req' : ''}${photo && !m.body ? ' msg--photo' : ''}`}>
               <p className="msg-meta">
                 {senderName(m.sender, viewer, customerName)}
                 {KIND_LABELS[m.kind] ? ` · ${KIND_LABELS[m.kind]}` : ''}
                 <span> · {formatDate(m.created_at, true)}</span>
               </p>
               {m.body && <p className="msg-body">{m.body}</p>}
-              {file && <FileChip file={file} />}
+              {file && (photo ? <ChatImage file={file} /> : <FileChip file={file} />)}
             </div>
           );
         })}
@@ -105,11 +109,16 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
               <input ref={fileInputRef} type="file" onChange={(e) => setAttachment(e.target.files?.[0] ?? null)} />
             </label>
             <div className="compose-box">
-              {attachment && <span className="compose-file">{attachment.name}</span>}
+              {attachment && (
+                <span className="compose-file">
+                  {preview && <img src={preview} alt="" />}
+                  <span>{attachment.name}</span>
+                  <button type="button" aria-label="Remove attachment" onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}><Icon name="close" size={12} /></button>
+                </span>
+              )}
               <label className="sr-only" htmlFor={`chat-${orderId}`}>Message</label>
-              <textarea
+              <AutoGrow
                 id={`chat-${orderId}`}
-                rows={1}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 onKeyDown={(e) => {

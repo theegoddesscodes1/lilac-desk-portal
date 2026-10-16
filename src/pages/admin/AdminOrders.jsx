@@ -5,6 +5,7 @@ import { isActive, isDone, money, shortDate, useAdmin } from '../../lib/portalDa
 import { StageDot } from '../../components/Bits';
 import Icon from '../../components/Icons';
 import FilterMenu from '../../components/FilterMenu';
+import { PRESET_TAGS, TagChips } from '../../components/OrderTags';
 import { shortPlanner } from './AdminHome';
 
 const STATUS = [
@@ -21,7 +22,7 @@ const LICENSE = [
 ];
 
 // Search by order number (with or without #), name, email, business, or planner type ("premium", "custom commercial")
-function matches(o, term) {
+function matches(o, term, tags = []) {
   const words = term.replace(/#/g, '').split(/\s+/).filter(Boolean);
   const hay = [
     o.shopify_order_name,
@@ -33,6 +34,7 @@ function matches(o, term) {
     o.license,
     `${o.tier} ${o.license}`,
     stageInfo(o.stage).label,
+    ...tags,
   ]
     .filter(Boolean)
     .join(' ')
@@ -41,7 +43,8 @@ function matches(o, term) {
 }
 
 export default function AdminOrders() {
-  const { loading, orders, addonsByOrder, totalFor } = useAdmin();
+  const { loading, orders, addonsByOrder, totalFor, tagsByOrder = {} } = useAdmin();
+  const [tag, setTag] = useState('any');
   const [status, setStatus] = useState('all');
   const [license, setLicense] = useState('any');
   const [q, setQ] = useState('');
@@ -53,7 +56,8 @@ export default function AdminOrders() {
       (o) =>
         test(o) &&
         (license === 'any' || o.license === license) &&
-        (!term || matches(o, term))
+        (tag === 'any' || (tag === 'tagged' ? (tagsByOrder[o.id] || []).length > 0 : (tagsByOrder[o.id] || []).includes(tag))) &&
+        (!term || matches(o, term, tagsByOrder[o.id]))
     );
     const out = [];
     for (const o of shown) {
@@ -69,7 +73,7 @@ export default function AdminOrders() {
       g.rows.sort((a, b) => rank(a) - rank(b) || new Date(a.due_at || 8e15) - new Date(b.due_at || 8e15) || new Date(b.created_at) - new Date(a.created_at));
     }
     return out;
-  }, [orders, status, license, q]);
+  }, [orders, status, license, tag, tagsByOrder, q]);
 
   if (loading) return <p className="muted page-pad">Loading</p>;
 
@@ -86,6 +90,18 @@ export default function AdminOrders() {
           groups={[
             { key: 'status', title: 'Status', all: 'all', value: status, onChange: setStatus, options: STATUS.map((s) => ({ ...s, count: orders.filter(s.test).length })) },
             { key: 'license', title: 'License', all: 'any', value: license, onChange: setLicense, options: LICENSE },
+            {
+              key: 'tag',
+              title: 'Your tags',
+              all: 'any',
+              value: tag,
+              onChange: setTag,
+              options: [
+                { key: 'any', label: 'All' },
+                { key: 'tagged', label: 'Any tag', count: orders.filter((o) => (tagsByOrder[o.id] || []).length).length },
+                ...[...new Set([...PRESET_TAGS, ...Object.values(tagsByOrder).flat()])].map((t) => ({ key: t, label: t, count: orders.filter((o) => (tagsByOrder[o.id] || []).includes(t)).length })).filter((t) => t.count > 0),
+              ],
+            },
           ]}
         />
       </div>
@@ -103,7 +119,7 @@ export default function AdminOrders() {
               return (
                 <Link key={o.id} to={`/orders/${o.id}`} className="tr">
                   <span className="num">{o.shopify_order_name}</span>
-                  <span>{o.customer_name || o.customer_email}</span>
+                  <span>{o.customer_name || o.customer_email}<TagChips tags={tagsByOrder[o.id]} /></span>
                   <span>{shortPlanner(o)}{n ? <span className="muted"> +{n}</span> : null}</span>
                   <StageDot stage={o.stage} />
                   <span className="hide-phone">{shortDate(o.created_at)}</span>

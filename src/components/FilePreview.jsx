@@ -100,3 +100,18 @@ export function FileChip({ file }) {
     </>
   );
 }
+
+// A photo sent in chat: shown big enough to see, like a text message. Tap to open full size.
+export function ChatImage({ file }) {
+  const urls = useViewUrls([file]);
+  const [open, setOpen] = useState(false);
+  const url = urls[file.path];
+  return (
+    <>
+      <button type="button" className="msg-photo" onClick={() => url && setOpen(true)} aria-label={`View ${file.name}`}>
+        {url ? <img src={url} alt={file.name} loading="lazy" /> : <span className="msg-photo-ph" />}
+      </button>
+      {open && <Lightbox file={file} url={url} onClose={() => setOpen(false)} />}
+    </>
+  );
+}

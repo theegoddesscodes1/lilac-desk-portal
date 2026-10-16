@@ -1,3 +1,4 @@
+import { TagChips } from '../../components/OrderTags';
 import Icon from '../../components/Icons';
 import { Link } from 'react-router-dom';
 import { TIERS, LICENSES } from '../../portal-config';
@@ -43,11 +44,11 @@ function upNext(order, messagesByOrder) {
   return { title: `${num} for ${name} is ${dueText(order)}.`, text: `${shortPlanner(order)} planner, currently designing.` };
 }
 
-function Line({ o, total, note, showDue }) {
+function Line({ o, total, note, showDue, tags }) {
   return (
     <Link to={`/orders/${o.id}`} className={`line${showDue ? '' : ' line--nodue'}`}>
       <span className="num">{o.shopify_order_name}</span>
-      <span className="line-who">{o.customer_name || o.customer_email}<small>{note}</small></span>
+      <span className="line-who">{o.customer_name || o.customer_email}<small>{note}</small><TagChips tags={tags} /></span>
       <StageDot stage={o.stage} />
       {showDue && <span className={`small${daysUntil(o.due_at) <= 2 ? ' ox' : ''}`}>{dueText(o).replace('due in ', '')}</span>}
       <span className="num r">{money(total)}</span>
@@ -56,7 +57,7 @@ function Line({ o, total, note, showDue }) {
 }
 
 export default function AdminHome() {
-  const { loading, orders, messagesByOrder, addonsByOrder, totalFor, quoteThreads = [], contactThreads = [] } = useAdmin();
+  const { loading, orders, messagesByOrder, addonsByOrder, totalFor, quoteThreads = [], contactThreads = [], tagsByOrder = {} } = useAdmin();
   const waitingContacts = contactThreads.filter((t) => !t.contact.quote_id && t.needsReply);
   const openRequests = quoteThreads.filter((t) => t.quote.status === 'open' || t.quote.status === 'quoted');
   if (loading) return <p className="muted page-pad">Loading</p>;
@@ -151,20 +152,20 @@ export default function AdminHome() {
           <p className="label muted section-gap">Needs you · {needs.length}</p>
           {needs.length === 0 && <p className="muted small">Nothing right now.</p>}
           {needs.map((o) => (
-            <Line key={o.id} o={o} total={totalFor(o)} showDue note={`${shortPlanner(o)}${addonsByOrder[o.id]?.length ? ` + ${addonsByOrder[o.id].length} add-on${addonsByOrder[o.id].length > 1 ? 's' : ''}` : ''}`} />
+            <Line key={o.id} tags={tagsByOrder[o.id]} o={o} total={totalFor(o)} showDue note={`${shortPlanner(o)}${addonsByOrder[o.id]?.length ? ` + ${addonsByOrder[o.id].length} add-on${addonsByOrder[o.id].length > 1 ? 's' : ''}` : ''}`} />
           ))}
         </div>
         <div>
           <p className="label muted">Waiting on the customer · {waiting.length}</p>
           {waiting.length === 0 && <p className="muted small">No one.</p>}
           {waiting.map((o) => (
-            <Line key={o.id} o={o} total={totalFor(o)} note={o.stage === 'order_placed' ? 'No brief yet' : 'Proof sent, waiting for review'} />
+            <Line key={o.id} tags={tagsByOrder[o.id]} o={o} total={totalFor(o)} note={o.stage === 'order_placed' ? 'No brief yet' : 'Proof sent, waiting for review'} />
           ))}
           <p className="label muted section-gap">Recently completed</p>
           {recent.length === 0 && <p className="muted small">Nothing delivered in the last 30 days.</p>}
           {recent.map((o) => {
             const left = 14 - Math.floor((Date.now() - new Date(o.delivered_at)) / 86400000);
-            return <Line key={o.id} o={o} total={totalFor(o)} note={`Delivered ${new Date(o.delivered_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${left > 0 ? `, fix window ${left} days` : ''}`} />;
+            return <Line key={o.id} tags={tagsByOrder[o.id]} o={o} total={totalFor(o)} note={`Delivered ${new Date(o.delivered_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${left > 0 ? `, fix window ${left} days` : ''}`} />;
           })}
           <p className="small section-gap-sm"><Link to="/orders"><u>All orders</u></Link></p>
         </div>
