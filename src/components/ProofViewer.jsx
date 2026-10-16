@@ -21,7 +21,7 @@ function PageFrame({ pageNo, children, pins, numberOf, pinning, onTap, onOpenPin
         <button
           key={p.id}
           type="button"
-          className={`pin${p.sent_at ? ' pin--sent' : ''}`}
+          className="pin"
           style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
           onClick={(e) => {
             e.stopPropagation();
@@ -114,6 +114,23 @@ export default function ProofViewer({ files, title, startIndex = 0, onClose, pin
   const [openPin, setOpenPin] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  // A one-time tip the first time someone can pin notes (remembered on this device)
+  const [tip, setTip] = useState(() => {
+    if (!pinning) return false;
+    try {
+      return !localStorage.getItem('ld-pin-tip');
+    } catch {
+      return true;
+    }
+  });
+  const hideTip = () => {
+    setTip(false);
+    try {
+      localStorage.setItem('ld-pin-tip', '1');
+    } catch {
+      /* private mode: it just shows again next time */
+    }
+  };
   const file = files[index];
   const filePins = pins.filter((p) => p.file_id === file.id);
   const numberOf = (p) => pins.findIndex((x) => x.id === p.id) + 1;
@@ -172,6 +189,7 @@ export default function ProofViewer({ files, title, startIndex = 0, onClose, pin
       pinning={pinning && mode}
       pending={pending}
       onTap={(page, x, y) => {
+        hideTip();
         setOpenPin(null);
         setText('');
         setPending({ page, x, y });
@@ -226,6 +244,15 @@ export default function ProofViewer({ files, title, startIndex = 0, onClose, pin
         )}
       </div>
 
+      {tip && pinning && mode && !pending && !openPin && (
+        <div className="pv-tip" role="note">
+          <span className="pv-tip-pin" aria-hidden="true"><i /></span>
+          <p><b>Tap anywhere on the proof</b> to leave a note right on that spot, like “make this title smaller.”</p>
+          <p className="pv-tip-sub">Add as many as you like. They go to me together when you send your changes.</p>
+          <button type="button" className="btn btn--sm btn--light" onClick={hideTip}>Got it</button>
+        </div>
+      )}
+
       {pending && (
         <form className="pv-sheet" onSubmit={savePin}>
           <p className="pv-sheet-title">Note for page {pending.page}</p>
@@ -240,7 +267,7 @@ export default function ProofViewer({ files, title, startIndex = 0, onClose, pin
 
       {openPin && (
         <div className="pv-sheet">
-          <p className="pv-sheet-title">Note {numberOf(openPin)} · page {openPin.page}{openPin.sent_at ? ' · sent' : ''}</p>
+          <p className="pv-sheet-title">Note {numberOf(openPin)} · page {openPin.page}</p>
           <p className="pv-sheet-body">{openPin.body}</p>
           <div className="pv-sheet-btns">
             <button type="button" className="btn btn--sm btn--light" onClick={() => setOpenPin(null)}>Close</button>

@@ -25,7 +25,7 @@ type Recipient = "customer" | "admin" | "other";
 
 const PUSH: Record<string, (o: any, toCustomer: boolean) => { title: string; body: string }> = {
   stage: () => ({ title: "An update on your planner", body: "Tap to see where your order is at." }),
-  proof_ready: () => ({ title: "Your proof is ready", body: "Take a look, then approve it or request changes." }),
+  proof_ready: () => ({ title: "Your proof is ready", body: "Approve it, or tap right on the proof to pin any changes." }),
   final_ready: () => ({ title: "Your planner is ready", body: "Your final files are ready to download." }),
   message: (o, toCustomer) => toCustomer
     ? { title: "New message from Kerry", body: "Tap to read and reply." }
@@ -62,7 +62,7 @@ const EVENTS: Record<string, { to: Recipient; subject: string; heading: string; 
     to: "customer",
     subject: "Your proof is ready",
     heading: "Your proof is ready to review",
-    body: "Open your order page to look it over, then approve it or request changes.",
+    body: "Open your order page to look it over. Approve it, or tap right on the proof to pin a note wherever you’d like something changed. Your notes go to me together when you send them.",
   },
   final_ready: {
     to: "customer",

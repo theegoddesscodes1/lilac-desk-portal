@@ -1440,3 +1440,14 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .bf-reuse > div { flex: 1 1 260px; }
 .bf-reuse-title { font-family: var(--serif); font-size: 19px; margin: 0 0 4px; }
 .bf-reuse .small { margin: 0; }
+/* first-time pin tip */
+.pv-tip { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 6; width: min(340px, calc(100% - 40px)); background: var(--white); color: var(--charcoal); border-radius: 22px; padding: 26px 22px 20px; text-align: center; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); display: grid; gap: 10px; justify-items: center; }
+.pv-tip p { margin: 0; font-size: 15px; line-height: 1.5; }
+.pv-tip b { font-weight: 500; }
+.pv-tip-sub { font-size: 13px !important; color: #6c6862; }
+.pv-tip .btn--light { background: var(--charcoal); color: var(--white); border-color: var(--charcoal); margin-top: 4px; }
+.pv-tip-pin { position: relative; width: 34px; height: 34px; margin-bottom: 4px; }
+.pv-tip-pin i { position: absolute; inset: 0; border-radius: 50% 50% 50% 4px; background: var(--oxblood); border: 2px solid #fff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+.pv-tip-pin::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; background: rgba(92, 24, 30, 0.25); animation: tippulse 1.6s ease-out infinite; }
+@keyframes tippulse { from { transform: scale(0.6); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pv-tip-pin::before { animation: none; } }
