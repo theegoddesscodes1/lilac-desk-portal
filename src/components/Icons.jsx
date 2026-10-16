@@ -38,6 +38,7 @@ const PATHS = {
   send: <path d="M5 12h13M13 6l6 6-6 6" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  quote: <path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" />,
   download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
   archive: <path d="M4 7h16v3H4zM5.5 10v9h13v-9M10 14h4" />,
   gear: (

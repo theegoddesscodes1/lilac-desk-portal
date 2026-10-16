@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
+import { supabase } from '../../supabaseClient';
 import { Link, useParams } from 'react-router-dom';
 import { STAGE_TONE, stageInfo } from '../../portal-config';
 import { useOrderData } from '../../lib/orderApi';
 import { ago, money, useAdmin } from '../../lib/portalData';
-import { QuoteThread } from '../QuotePages';
+import { QuoteThread, SendQuote } from '../QuotePages';
 import { ContactThread } from '../ContactPages';
 import { Avatar, StageDot, avatarKind } from '../../components/Bits';
 import ArchiveButton from '../../components/ArchiveButton';
@@ -22,16 +23,43 @@ const FILTERS = [
 const QUICK = ['Got it, working on it now.', 'Your new proof is up.', 'Your final files are ready to download.'];
 const LIVE = ['delivered', 'complete', 'closed'];
 
+// Sent into the order chat so the customer knows where to find a quote you send from here
+const QUOTE_NOTE = 'I’ve sent you a quote for a new custom planner. You’ll find it on your Home page, with a button to review and pay.';
+
 // One customer, all their orders: chips switch between each order's messages
 function Conversation({ orderId }) {
   const { loading, error, order, files, messages } = useOrderData(orderId);
   const { conversationFor, isOnline } = useAdmin();
+  const [quoting, setQuoting] = useState(false);
+  const [sentQuote, setSentQuote] = useState(null);
   if (loading) return <p className="muted page-pad">Loading</p>;
   if (error) return <p className="error page-pad">{error}</p>;
   const name = order.customer_name || order.customer_email;
   const convo = conversationFor(order.id);
   const chips = convo?.chips ?? [];
   const online = isOnline(order.customer_email);
+  // Archive by hand once everything is delivered; it also happens on its own after the fix window
+  const canArchive = convo && (convo.archived || chips.every(({ order: o }) => LIVE.includes(o.stage)));
+
+  async function createQuote(license) {
+    const { data, error: err } = await supabase
+      .from('quotes')
+      .insert({
+        email: order.customer_email.toLowerCase(),
+        name: order.customer_name,
+        license,
+        request: { idea: `Quote from the chat about ${order.shopify_order_name}`, from: 'chat', order: order.shopify_order_name },
+      })
+      .select('id')
+      .single();
+    if (err) throw err;
+    return data.id;
+  }
+  async function quoteSent(quoteId) {
+    await supabase.from('messages').insert({ order_id: order.id, sender: 'admin', body: QUOTE_NOTE });
+    setQuoting(false);
+    setSentQuote(quoteId);
+  }
   return (
     <div className="convo">
       <div className="convo-head">
@@ -45,9 +73,35 @@ function Conversation({ orderId }) {
             {order.due_at && !LIVE.includes(order.stage) ? ` · ${dueText(order)}` : ''}
           </p>
         </div>
-        {convo && <ArchiveButton threadKey={convo.key} archived={convo.archived} className="archive-btn--icon" />}
-        <Link to={`/orders/${order.id}`} className="btn btn--ghost btn--sm hide-phone">Open order</Link>
+        <div className="convo-actions">
+          <button type="button" className="btn btn--ghost btn--sm head-btn" onClick={() => setQuoting(true)} title="Send a quote for a new custom planner">
+            <Icon name="quote" size={15} /> <span>Send quote</span>
+          </button>
+          <Link to={`/orders/${order.id}`} className="btn btn--ghost btn--sm hide-phone">Open order</Link>
+          {canArchive && <ArchiveButton threadKey={convo.key} archived={convo.archived} className="head-btn" />}
+        </div>
       </div>
+      {sentQuote && (
+        <p className="convo-note">
+          <Icon name="check" size={14} /> Quote sent. Once they pay, it becomes a new order.{' '}
+          <Link to={`/messages/q/${sentQuote}`}><u>View the quote</u></Link>
+        </p>
+      )}
+      {quoting && (
+        <div className="sheet" role="dialog" aria-label="Send a quote" onClick={() => setQuoting(false)}>
+          <div className="sheet-card" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <div>
+                <p className="label ox">New custom planner</p>
+                <p className="sheet-title">Send {name.split(' ')[0]} a quote</p>
+                <p className="small muted">Paying it creates a separate new order. To add to {order.shopify_order_name}, they can buy extras instead.</p>
+              </div>
+              <button type="button" className="ibtn" onClick={() => setQuoting(false)} aria-label="Close"><Icon name="close" size={16} /></button>
+            </div>
+            <SendQuote createQuote={createQuote} onDone={quoteSent} defaultLicense={order.license === 'commercial' ? 'commercial' : 'personal'} />
+          </div>
+        </div>
+      )}
       {chips.length > 1 && (
         <div className="ochips" role="tablist" aria-label="Their orders">
           {chips.map(({ order: o, thread }) => (
@@ -178,9 +232,9 @@ export default function AdminMessages() {
       </div>
       <div className="inbox-chat">
         {cid ? (
-          <ContactThread key={cid} admin contactId={cid} embedded headExtra={openContact && <ArchiveButton threadKey={openContact.key} archived={openContact.archived} className="archive-btn--icon" />} />
+          <ContactThread key={cid} admin contactId={cid} embedded headExtra={openContact && <ArchiveButton threadKey={openContact.key} archived={openContact.archived} className="head-btn" />} />
         ) : qid ? (
-          <QuoteThread key={qid} admin quoteId={qid} embedded headExtra={openQuote && <ArchiveButton threadKey={openQuote.key} archived={openQuote.archived} className="archive-btn--icon" />} />
+          <QuoteThread key={qid} admin quoteId={qid} embedded headExtra={openQuote && <ArchiveButton threadKey={openQuote.key} archived={openQuote.archived} className="head-btn" />} />
         ) : id ? (
           <Conversation key={id} orderId={id} />
         ) : (

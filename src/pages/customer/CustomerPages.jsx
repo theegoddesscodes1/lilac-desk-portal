@@ -220,7 +220,7 @@ export function CustomerHome() {
           <AddExtras order={order} addons={addons} orderAddons={orderAddons} />
           {openQuote ? (
             <Link to={`/quotes/${openQuote.id}`} className="mini-row">
-              <span>Your custom planner request<small>{openQuote.status === 'quoted' ? 'Quote ready to review' : 'In conversation'}</small></span>
+              <span>{openQuote.request?.from === 'chat' ? `A quote from ${DESIGNER_NAME}` : 'Your custom planner request'}<small>{openQuote.status === 'quoted' ? 'Ready to review and pay' : 'In conversation'}</small></span>
               <span className="small"><u>Open</u></span>
             </Link>
           ) : (

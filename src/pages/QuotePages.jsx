@@ -217,8 +217,8 @@ export function DeclinePanel({ quote, onDone, onCancel }) {
   );
 }
 
-function SendQuote({ quote, onDone }) {
-  const [license, setLicense] = useState(quote.license || 'personal');
+export function SendQuote({ quote = {}, onDone, createQuote, defaultLicense = 'personal' }) {
+  const [license, setLicense] = useState(quote.license || defaultLicense);
   const [price, setPrice] = useState(quote.price ? String(quote.price) : '');
   const [scope, setScope] = useState(quote.scope || '');
   const [manual, setManual] = useState(false);
@@ -235,8 +235,20 @@ function SendQuote({ quote, onDone }) {
     e.preventDefault();
     setBusy(true);
     setError('');
+    // From an order chat there's no request yet: start one, and remove it again if sending fails
+    let quoteId = quote.id;
+    let created = false;
+    if (!quoteId) {
+      try {
+        quoteId = await createQuote(license);
+        created = true;
+      } catch (createErr) {
+        setBusy(false);
+        return setError(errorText(createErr));
+      }
+    }
     const { data, error: err } = await supabase.functions.invoke('portal-quote', {
-      body: { action: 'send', quote_id: quote.id, license, price: Number(price), scope, manual_url: manual ? url : undefined },
+      body: { action: 'send', quote_id: quoteId, license, price: Number(price), scope, manual_url: manual ? url : undefined },
     });
     setBusy(false);
     let msg = err ? errorText(err) : data?.error;
@@ -247,9 +259,12 @@ function SendQuote({ quote, onDone }) {
         /* keep msg */
       }
     }
-    if (msg) return setError(msg);
+    if (msg) {
+      if (created) await supabase.from('quotes').delete().eq('id', quoteId);
+      return setError(msg);
+    }
     refreshAll();
-    onDone();
+    onDone(quoteId);
   }
 
   return (
