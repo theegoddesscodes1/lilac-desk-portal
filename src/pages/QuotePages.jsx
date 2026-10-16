@@ -136,19 +136,39 @@ function RequestSummary({ quote }) {
   );
 }
 
-function QuoteCard({ quote, admin }) {
+export function QuoteCard({ quote, admin, compact = false }) {
   const lic = quote.license === 'commercial' ? 'Commercial' : 'Personal';
+  const payable = quote.status === 'quoted' && !admin && quote.invoice_url;
   return (
-    <div className="qcard-quote">
-      <p className="label ox">Your quote</p>
+    <div className={`qcard-quote${compact ? ' qcard-quote--compact' : ''}`}>
+      <div className="qcard-top">
+        <p className="label ox">{admin ? 'Quote sent' : 'Your quote'}</p>
+        <span className="ntag">{lic} license</span>
+      </div>
       <p className="qcard-price num">{money(quote.price)}</p>
-      <p className="muted small">{lic} license · custom planner</p>
-      <p className="qcard-scope">{quote.scope}</p>
-      {quote.status === 'quoted' && !admin && quote.invoice_url && (
-        <a href={quote.invoice_url} className="btn btn--ox btn--block">Pay and start</a>
+      <p className="muted small">Custom planner{quote.quoted_at ? ` · quoted ${formatDate(quote.quoted_at)}` : ''}</p>
+      <div className="qcard-sec">
+        <p className="label muted">What’s included</p>
+        <p className="qcard-scope">{quote.scope}</p>
+      </div>
+      {payable && !compact && (
+        <div className="qcard-sec">
+          <p className="label muted">What happens next</p>
+          <ol className="qcard-steps">
+            <li>Pay securely through the Lilac Desk checkout.</li>
+            <li>Your brief opens here right away.</li>
+            <li>I design, you review proofs, then download.</li>
+          </ol>
+        </div>
       )}
-      {quote.status === 'quoted' && admin && <p className="small muted">Sent {formatDate(quote.quoted_at)}. Waiting for payment.</p>}
-      {quote.status === 'paid' && <p className="small ox"><Icon name="check" size={14} /> Paid {formatDate(quote.paid_at)}</p>}
+      {payable && (
+        <div className="qcard-pay">
+          <a href={quote.invoice_url} className="btn btn--ox">Pay {money(quote.price)} and start</a>
+          {!compact && <span className="small muted">Questions first? Message me below.</span>}
+        </div>
+      )}
+      {quote.status === 'quoted' && admin && <p className="small muted qcard-note">Waiting for payment.</p>}
+      {quote.status === 'paid' && <p className="small ox qcard-note"><Icon name="check" size={14} /> Paid {formatDate(quote.paid_at)}</p>}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes, useMatch, useParams } fro
 import { supabase } from './supabaseClient';
 import { SHOP_URL } from './portal-config';
 import { registerServiceWorker, resyncPush } from './lib/push';
+import { signOut } from './lib/appVersion';
 import { AdminDataProvider, CustomerDataProvider, useAdmin, useCustomer } from './lib/portalData';
 import Shell from './components/Shell';
 import Icon from './components/Icons';
@@ -54,7 +55,7 @@ function AdminApp({ email }) {
       footer={
         <>
           <p>{email}</p>
-          <p><Link to="/settings"><u>Settings</u></Link> · <button type="button" className="link-btn" onClick={() => supabase.auth.signOut()}>Sign out</button></p>
+          <p><Link to="/settings"><u>Settings</u></Link> · <button type="button" className="link-btn" onClick={signOut}>Sign out</button></p>
         </>
       }
     >
@@ -107,7 +108,7 @@ function CustomerApp({ email }) {
       footer={
         <>
           <p>{email}</p>
-          <p><Link to="/settings"><u>Settings</u></Link> · <a href={SHOP_URL}><u>Shop</u></a> · <button type="button" className="link-btn" onClick={() => supabase.auth.signOut()}>Sign out</button></p>
+          <p><Link to="/settings"><u>Settings</u></Link> · <a href={SHOP_URL}><u>Shop</u></a> · <button type="button" className="link-btn" onClick={signOut}>Sign out</button></p>
         </>
       }
     >

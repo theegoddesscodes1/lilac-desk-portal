@@ -1161,3 +1161,39 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .tr--cord > span:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
   .tr--cord > .stage-dot { grid-column: 1 / -1; grid-row: 3; }
 }
+
+/* ---------- v11: quote card + quote home ---------- */
+.qcard-quote { align-self: flex-start; width: 100%; max-width: 560px; margin: 6px 0; padding: 26px 28px; border-radius: 20px; border-bottom-left-radius: 6px; border-color: var(--greige); box-shadow: 0 1px 0 rgba(0,0,0,0.02), 0 12px 32px -18px rgba(92,24,30,0.25); }
+.qcard-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.qcard-top .label { margin: 0; }
+.qcard-top .ntag { border-radius: 999px; padding: 3px 10px; }
+.qcard-price { font-family: var(--serif); font-size: 46px; line-height: 1; margin: 14px 0 6px; }
+.qcard-sec { margin-top: 20px; padding-top: 18px; border-top: 1px solid #EEECE8; }
+.qcard-sec .label { margin: 0 0 8px; }
+.qcard-scope { white-space: pre-wrap; font-size: 15px; line-height: 1.6; margin: 0; padding: 0; border: 0; }
+.qcard-steps { margin: 0; padding: 0; list-style: none; counter-reset: qs; display: grid; gap: 8px; font-size: 14px; }
+.qcard-steps li { counter-increment: qs; display: flex; gap: 12px; align-items: baseline; }
+.qcard-steps li::before { content: counter(qs); flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--lilac); font-size: 11.5px; display: inline-flex; align-items: center; justify-content: center; transform: translateY(-1px); }
+.qcard-pay { margin-top: 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.qcard-pay .btn { padding-left: 28px; padding-right: 28px; }
+.qcard-note { margin: 16px 0 0; }
+.qcard-quote--compact { max-width: none; margin: 0; padding: 22px; border-radius: 18px; }
+.qcard-quote--compact .qcard-price { font-size: 38px; }
+.qcard-quote--compact .qcard-pay .btn { width: 100%; }
+
+.qprog { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); max-width: 460px; }
+.qprog li { position: relative; padding-top: 20px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #8a867f; }
+.qprog li span { position: absolute; top: 0; left: 0; width: 11px; height: 11px; border-radius: 50%; border: 1px solid var(--greige); background: var(--warm-white, #FAFAF8); z-index: 1; }
+.qprog li::before { content: ''; position: absolute; top: 5px; left: 0; right: 0; height: 1px; background: var(--greige); }
+.qprog li:last-child::before { right: auto; width: 0; }
+.qprog li.done span { background: var(--oxblood); border-color: var(--oxblood); }
+.qprog li.done::before { background: var(--oxblood); }
+.qprog li.now { color: var(--oxblood); }
+.qprog li.now span { border: 3px solid var(--oxblood); }
+
+@media (max-width: 899px) {
+  .qcard-quote { padding: 22px 20px; }
+  .qcard-price { font-size: 40px; }
+  .qcard-pay .btn { width: 100%; }
+  .qprog { margin-top: 28px; }
+}

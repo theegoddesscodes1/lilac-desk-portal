@@ -7,11 +7,13 @@ import { errorText, formatDate, formatSize, notify, openFile, proofRounds, refre
 import { FileChip, ImageGrid, isImage } from '../../components/FilePreview';
 import { RoundList } from '../../components/ProofRounds';
 import { isActive, isDone, shortDate, useCustomer } from '../../lib/portalData';
+import { signOut } from '../../lib/appVersion';
 import { DeliveryLine, ProgressDots, ProgressHead } from '../../components/Bits';
 import BriefForm from '../../components/BriefForm';
 import ChatPanel from '../../components/ChatPanel';
 import AddExtras from '../../components/AddExtras';
 import Icon from '../../components/Icons';
+import { QuoteCard } from '../QuotePages';
 
 function useOrder() {
   const { id } = useParams();
@@ -33,7 +35,7 @@ function NoOrder({ title }) {
       <div className="btn-row">
         <Link to="/quote/new" className="btn btn--ox">Request a custom planner</Link>
         <a href={`${SHOP_URL}/pages/custom-planners`} className="btn btn--ghost">See planner tiers</a>
-        <button type="button" className="btn btn--ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
+        <button type="button" className="btn btn--ghost" onClick={signOut}>Sign out</button>
       </div>
     </main>
   );
@@ -49,9 +51,74 @@ function Loading({ error }) {
 export function CustomerRoot() {
   const { loading, current, openQuote, quotes } = useCustomer();
   if (loading) return <p className="muted page-pad">Loading your order</p>;
-  if (!current && (openQuote || quotes?.length)) return <Navigate to={`/quotes/${(openQuote || quotes[0]).id}`} replace />;
+  if (!current && (openQuote || quotes?.length)) return <QuoteHome quote={openQuote || quotes[0]} />;
   if (!current) return <NoOrder title="No custom planner orders yet." />;
   return <Navigate to={`/orders/${current.id}`} replace />;
+}
+
+// ---------- Home when there's a custom request but no order yet ----------
+
+const QUOTE_STEPS = ['Request', 'Quote', 'Pay', 'Brief'];
+
+function QuoteHome({ quote }) {
+  const { unreadQuote } = useCustomer();
+  const chat = `/quotes/${quote.id}`;
+  const unread = unreadQuote(quote.id);
+  const at = { open: 1, quoted: 2, paid: 3, closed: -1 }[quote.status] ?? 1;
+  const copy = {
+    open: { title: 'Your request is in.', text: 'I’m reading it over and will reply in your request chat, usually within a day. You’ll get an email when I do.' },
+    quoted: { title: 'Your quote is ready.', text: 'Look it over, ask anything you’re unsure about, and pay when you’re ready. Your brief opens right after.' },
+    paid: { title: 'Payment received.', text: 'Your order is being set up. It will appear here in a minute or two.' },
+    closed: { title: 'This request is closed.', text: 'This quote didn’t go ahead. If anything changes, you can send a new request anytime, or choose one of the planner tiers.' },
+  }[quote.status] || {};
+  const idea = quote.request?.idea;
+
+  return (
+    <main className="page home">
+      <div className="home-grid">
+        <div>
+          <p className="label muted">Custom planner request · {formatDate(quote.created_at)}</p>
+          <p className="label ox home-next">{quote.status === 'closed' ? 'Request closed' : 'Where things are'}</p>
+          <h1 className="h-display">{copy.title}</h1>
+          <p className="lead">{copy.text}</p>
+          <div className="btn-row">
+            {quote.status === 'closed' ? (
+              <>
+                <Link to="/quote/new" className="btn btn--ox btn--lg">Send a new request</Link>
+                <a href={`${SHOP_URL}/pages/custom-planners`} className="btn btn--ghost btn--lg">See planner tiers</a>
+              </>
+            ) : quote.status === 'quoted' && quote.invoice_url ? (
+              <>
+                <a href={quote.invoice_url} className="btn btn--ox btn--lg">Pay and start</a>
+                <Link to={chat} className="btn btn--ghost btn--lg">Ask a question{unread ? ` (${unread})` : ''}</Link>
+              </>
+            ) : (
+              <Link to={chat} className={`btn ${unread ? 'btn--ox' : 'btn--ghost'} btn--lg`}>{unread ? `Read ${DESIGNER_NAME}’s reply` : 'Open your request'}</Link>
+            )}
+          </div>
+
+          {at > 0 && (
+            <ol className="qprog" aria-label="Progress">
+              {QUOTE_STEPS.map((label, i) => (
+                <li key={label} className={i < at ? 'done' : i === at ? 'now' : ''}><span />{label}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="home-side">
+          {quote.status === 'quoted' && quote.price ? <QuoteCard quote={quote} compact /> : null}
+          {idea && (
+            <div className="home-quote">
+              <p className="label muted">What you asked for</p>
+              <p className="quote">“{idea}”</p>
+              <Link to={chat} className="small"><u>{quote.status === 'closed' ? 'View the conversation' : 'Open the conversation'}</u></Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
 }
 
 // ---------- Home ----------
