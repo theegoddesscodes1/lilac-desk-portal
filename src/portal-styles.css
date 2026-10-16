@@ -1451,3 +1451,5 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .pv-tip-pin::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; background: rgba(92, 24, 30, 0.25); animation: tippulse 1.6s ease-out infinite; }
 @keyframes tippulse { from { transform: scale(0.6); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .pv-tip-pin::before { animation: none; } }
+.msg-pins { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 7px 14px; border: 1px solid var(--oxblood); border-radius: 999px; background: #fff; color: var(--oxblood); font: inherit; font-size: 13px; cursor: pointer; }
+.msg-pins:hover { background: var(--oxblood); color: var(--white); }

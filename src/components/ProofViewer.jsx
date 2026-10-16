@@ -104,8 +104,9 @@ function PdfPages({ url, frame }) {
 
 // Full-screen viewer for a set of files (one proof round). Download is always one tap away.
 // With pins: shows the notes pinned on this round; with pinning on, the customer can tap to add notes.
-export default function ProofViewer({ files, title, startIndex = 0, onClose, pins = [], pinning = false, onAddPin, onRemovePin }) {
-  const [index, setIndex] = useState(startIndex);
+export default function ProofViewer({ files, title, startIndex = null, onClose, pins = [], pinning = false, onAddPin, onRemovePin }) {
+  // Open on the first file that has notes, unless a file was picked
+  const [index, setIndex] = useState(() => startIndex ?? Math.max(0, files.findIndex((f) => pins.some((p) => p.file_id === f.id))));
   const [url, setUrl] = useState('');
   const [failed, setFailed] = useState(false);
   const [mode, setMode] = useState(pinning);

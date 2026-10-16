@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { DESIGNER_NAME } from '../portal-config';
-import { errorText, formatDate, notify, refreshAll, uploadOrderFile } from '../lib/orderApi';
+import { errorText, formatDate, notify, proofRounds, refreshAll, uploadOrderFile } from '../lib/orderApi';
+import { usePins } from '../lib/proofPins';
+import ProofViewer from './ProofViewer';
 import { ChatImage, FileChip, isImage } from './FilePreview';
 import AutoGrow from './AutoGrow';
 import Icon from './Icons';
@@ -24,6 +26,12 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
   const [error, setError] = useState('');
   const listRef = useRef(null);
   const fileInputRef = useRef(null);
+  // Admin only: change requests with pinned notes get a button that opens the proof with the pins on it
+  const { pins } = usePins(viewer === 'admin' ? orderId : null);
+  const [pinView, setPinView] = useState(null);
+  const rounds = useMemo(() => (viewer === 'admin' ? proofRounds(files ?? [], messages) : []), [viewer, files, messages]);
+  const roundFor = (m) => rounds.find((r) => r.verdict?.id === m.id) || rounds.find((r) => r.verdict && r.verdict.at === m.created_at);
+  const pinsOn = (r) => (r ? pins.filter((p) => p.sent_at && p.round === r.number && r.files.some((f) => f.id === p.file_id)) : []);
   const preview = useMemo(() => (attachment?.type?.startsWith('image/') ? URL.createObjectURL(attachment) : null), [attachment]);
   useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
 
@@ -74,6 +82,7 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
 
   return (
     <div className="chat">
+      {pinView && <ProofViewer files={pinView.files} title={`Proof ${pinView.number} · notes`} pins={pinsOn(pinView)} onClose={() => setPinView(null)} />}
       <div className="chat-list" ref={listRef}>
         {shown.length === 0 && <p className="muted chat-empty">{viewer === 'admin' ? 'No messages yet. Say hello below.' : 'No messages yet. Ask anything about your planner here.'}</p>}
         {shown.map((m) => {
@@ -92,6 +101,15 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
               </p>
               {m.body && <p className="msg-body">{m.body}</p>}
               {file && (photo ? <ChatImage file={file} /> : <FileChip file={file} />)}
+              {viewer === 'admin' && m.kind === 'revision_request' && (() => {
+                const r = roundFor(m);
+                const on = pinsOn(r);
+                return on.length > 0 ? (
+                  <button type="button" className="msg-pins" onClick={() => setPinView(r)}>
+                    <Icon name="proof" size={15} /> See {on.length === 1 ? 'the note' : `all ${on.length} notes`} on proof {r.number}
+                  </button>
+                ) : null;
+              })()}
               {lastMine && m.id === lastMine.id && <SeenLine at={m.read_at} />}
             </div>
           );

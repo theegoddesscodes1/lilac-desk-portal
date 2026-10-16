@@ -76,7 +76,11 @@ function buildActivity(order, rounds, messages, orderAddons, first, reminders = 
   // Order events only; conversations live in the Messages tab
   for (const m of messages) {
     if (m.kind === 'approval') items.push({ id: m.id, at: m.created_at, text: `${first} approved ${approvedProofNumber(messages, m) ? `proof ${approvedProofNumber(messages, m)}` : 'the proof'}`, to: 'chat', strong: true });
-    else if (m.kind === 'revision_request') items.push({ id: m.id, at: m.created_at, text: `${first} asked for changes`, sub: m.body, to: 'chat', strong: true });
+    else if (m.kind === 'revision_request') {
+      // Opens the proof with their pinned notes when there's a matching round
+      const r = rounds.find((x) => x.verdict?.id === m.id);
+      items.push({ id: m.id, at: m.created_at, text: `${first} asked for changes`, sub: m.body, to: 'chat', round: r, strong: true });
+    }
   }
   if (order.delivered_at) items.push({ id: 'delivered', at: order.delivered_at, text: 'Final files delivered', to: 'files' });
   if (Number(order.refunded_amount) > 0 && order.refunded_at) items.push({ id: 'refund', at: order.refunded_at, text: `Refunded ${money(order.refunded_amount)}`, strong: true });

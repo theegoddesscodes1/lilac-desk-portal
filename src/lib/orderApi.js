@@ -104,7 +104,7 @@ export function proofRounds(files, messages = []) {
   for (const r of rounds) {
     const next = rounds[rounds.indexOf(r) + 1];
     const v = verdicts.find((m) => new Date(m.created_at) >= new Date(r.at) && (!next || new Date(m.created_at) < new Date(next.at)));
-    if (v) r.verdict = { kind: v.kind, at: v.created_at };
+    if (v) r.verdict = { id: v.id, kind: v.kind, at: v.created_at };
   }
   return rounds.reverse();
 }
