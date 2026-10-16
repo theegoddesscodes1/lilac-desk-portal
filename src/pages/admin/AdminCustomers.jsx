@@ -104,7 +104,7 @@ function Notes({ email }) {
 export function AdminCustomer() {
   const { email: raw } = useParams();
   const email = decodeURIComponent(raw).toLowerCase();
-  const { loading, messagesByOrder, addonsByOrder, totalFor } = useAdmin();
+  const { loading, messagesByOrder, addonsByOrder, totalFor, bestOrderFor, isOnline } = useAdmin();
   const customers = useCustomers();
   if (loading) return <p className="muted page-pad">Loading</p>;
   const c = customers.find((x) => x.email === email);
@@ -134,7 +134,7 @@ export function AdminCustomer() {
       <Link to="/customers" className="back-link"><Icon name="back" size={16} /> Customers</Link>
 
       <div className="cp-head">
-        <Avatar name={c.name} tone="avatar--lg" kind={avatarKind(c.orders[0])} />
+        <Avatar name={c.name} tone="avatar--lg" kind={avatarKind(c.orders[0])} online={isOnline?.(c.email)} />
         <div className="cp-who">
           <h1 className="h-page">{c.name}</h1>
           <p className="muted small">{c.business ? `${c.business} · ` : ''}{c.email}</p>
@@ -144,7 +144,7 @@ export function AdminCustomer() {
           </div>
         </div>
         <div className="cp-actions">
-          <Link to={`/messages/${latest.id}`} className="btn btn--sm">Message</Link>
+          <Link to={`/messages/${(bestOrderFor?.(c.email) || latest).id}`} className="btn btn--sm">Message</Link>
           <a href={`mailto:${c.email}`} className="btn btn--ghost btn--sm">Email</a>
         </div>
       </div>

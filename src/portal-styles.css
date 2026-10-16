@@ -1293,3 +1293,41 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .up { grid-template-columns: minmax(0, 1fr); }
 .up > * { min-width: 0; }
 .up-drop { border-radius: 12px; }
+
+/* ---------- v18: quiet text action (Export CSV) ---------- */
+.quiet-link { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 6px 2px; font: inherit; font-size: 12.5px; color: #8a867f; cursor: pointer; text-decoration: none; }
+.quiet-link:hover { color: var(--oxblood); }
+.quiet-link span { border-bottom: 1px solid transparent; }
+.quiet-link:hover span { border-bottom-color: currentColor; }
+
+/* ---------- v19: grouped inbox, archive, seen + online ---------- */
+.thread--on .avatar:not(.avatar--dark):not(.avatar--ox) { background: var(--white); }
+.avatar { position: relative; }
+.avatar-online { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #7C9A72; box-shadow: 0 0 0 2px var(--white); }
+.avatar--lg .avatar-online { width: 15px; height: 15px; right: 2px; bottom: 2px; }
+.online-text { font-size: 12.5px; color: #5F7D56; }
+.thread-meta .stage-dot { font-size: 11.5px; color: #8a867f; }
+
+.ochips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; scrollbar-width: none; border-bottom: 1px solid var(--greige); }
+.ochips::-webkit-scrollbar { display: none; }
+.ochip { position: relative; flex: none; display: flex; flex-direction: column; gap: 1px; padding: 7px 14px; border: 1px solid var(--greige); border-radius: 16px; background: #fff; text-decoration: none; color: var(--charcoal); line-height: 1.25; }
+.ochip b { font-family: var(--serif); font-weight: 400; font-size: 14px; }
+.ochip span { font-size: 11.5px; color: #8a867f; white-space: nowrap; }
+.ochip:hover { border-color: var(--charcoal); }
+.ochip--on { border-color: var(--oxblood); box-shadow: inset 0 0 0 0.5px var(--oxblood); }
+.ochip--on b { color: var(--oxblood); }
+.ochip-dot { position: absolute; top: 7px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--oxblood); }
+
+.msg-seen { display: block; margin-top: 6px; font-size: 11px; color: #8a867f; text-align: right; }
+.msg--mine .msg-seen { color: #7a7381; }
+.archive-btn { display: inline-flex; align-items: center; gap: 6px; }
+.seg button .icon { vertical-align: -2px; margin-right: 4px; }
+@media (max-width: 899px) {
+  .ochips { padding-bottom: 10px; }
+}
+@media (max-width: 899px) {
+  .archive-btn--icon { width: 36px; height: 36px; padding: 0; justify-content: center; border-radius: 50%; }
+  .archive-btn--icon span { display: none; }
+}
+.inbox-head .seg button { padding: 6px 8px; font-size: 11.5px; }
+@media (max-width: 899px) { .inbox-head .seg button { padding: 6px 10px; font-size: 12px; } }

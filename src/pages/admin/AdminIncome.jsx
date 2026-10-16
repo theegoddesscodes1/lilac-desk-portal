@@ -94,7 +94,7 @@ export default function AdminIncome() {
       <h1 className="sr-only">Income</h1>
       <div className="toolbar toolbar--split">
         <div className="seg">{PERIODS.map((p) => <button key={p.key} type="button" className={period === p.key ? 'on' : ''} onClick={() => setPeriod(p.key)}>{p.label}</button>)}</div>
-        <button type="button" className="icon-link hide-phone" onClick={exportCsv}><Icon name="files" size={16} /> <span>Export CSV</span></button>
+        <button type="button" className="quiet-link hide-phone" onClick={exportCsv}><Icon name="download" size={14} /> <span>Export CSV</span></button>
       </div>
 
       <div className="kpis">

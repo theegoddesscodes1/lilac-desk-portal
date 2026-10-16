@@ -6,6 +6,7 @@ import { errorText, formatDate, keepFresh, onConnected, refreshAll } from '../li
 import { money } from '../lib/portalData';
 import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
+import { SeenLine } from '../components/ChatPanel';
 import AutoGrow from '../components/AutoGrow';
 
 const STATUS = { open: 'Talking it through', quoted: 'Quote sent', paid: 'Paid', closed: 'Closed' };
@@ -284,7 +285,7 @@ function SendQuote({ quote, onDone }) {
   );
 }
 
-export function QuoteThread({ admin = false, quoteId, embedded = false }) {
+export function QuoteThread({ admin = false, quoteId, embedded = false, headExtra = null }) {
   const params = useParams();
   const id = quoteId || params.id;
   const { loading, error, quote, messages, reload } = useQuote(id);
@@ -306,6 +307,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
   if (error) return <main className="page"><p className="error">{error}</p><Link to="/"><u>Home</u></Link></main>;
 
   const name = quote.name || quote.email;
+  const lastMineId = [...messages].reverse().find((m) => m.sender === 'admin' && m.kind !== 'quote')?.id;
   const lastQuoteId = [...messages].reverse().find((m) => m.kind === 'quote')?.id;
   const Wrapper = embedded ? 'div' : 'main';
 
@@ -346,6 +348,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
             {quote.status === 'quoted' ? 'Update quote' : 'Send quote'}
           </button>
         )}
+        {headExtra}
         {quote.status === 'paid' && quote.order_id && (
           <Link to={`/orders/${quote.order_id}`} className="btn btn--sm">{admin ? 'Open order' : 'Go to your order'}</Link>
         )}
@@ -371,6 +374,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
               <div key={m.id} className={`msg ${mine ? 'msg--mine' : 'msg--theirs'}`}>
                 <p className="msg-meta">{who}{m.kind === 'request' ? ' · Request' : ''} · {formatDate(m.created_at, true)}</p>
                 <p className="msg-body">{m.body}</p>
+                {admin && m.id === lastMineId && <SeenLine at={m.read_at} />}
               </div>
             );
           })}

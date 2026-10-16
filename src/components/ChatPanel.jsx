@@ -13,6 +13,10 @@ function senderName(sender, viewer, customerName) {
   return sender === 'admin' ? DESIGNER_NAME : customerName || 'Customer';
 }
 
+export function SeenLine({ at, pending = 'Sent' }) {
+  return <span className="msg-seen">{at ? `Seen ${formatDate(at, true)}` : pending}</span>;
+}
+
 export default function ChatPanel({ orderId, messages, files, viewer, customerName, disabled, quickReplies = [], onSent }) {
   const [body, setBody] = useState('');
   const [attachment, setAttachment] = useState(null);
@@ -28,6 +32,8 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
   const filesById = useMemo(() => Object.fromEntries((files ?? []).map((f) => [f.id, f])), [files]);
   const otherSide = viewer === 'admin' ? 'customer' : 'admin';
   const unread = messages.some((m) => m.sender === otherSide && !m.read_at);
+  // Admin only: has the customer seen your latest message? (Customers never see this about you.)
+  const lastMine = viewer === 'admin' ? [...shown].reverse().find((m) => m.sender === 'admin') : null;
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
@@ -86,6 +92,7 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
               </p>
               {m.body && <p className="msg-body">{m.body}</p>}
               {file && (photo ? <ChatImage file={file} /> : <FileChip file={file} />)}
+              {lastMine && m.id === lastMine.id && <SeenLine at={m.read_at} />}
             </div>
           );
         })}

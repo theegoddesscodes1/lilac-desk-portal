@@ -5,6 +5,7 @@ import { DESIGNER_NAME } from '../portal-config';
 import { errorText, formatDate, keepFresh, onConnected, refreshAll } from '../lib/orderApi';
 import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
+import { SeenLine } from '../components/ChatPanel';
 import AutoGrow from '../components/AutoGrow';
 
 // Messages sent from the Contact page on lilacdesk.com
@@ -39,7 +40,7 @@ function useContact(id) {
 
 const QUICK = ['Thanks for reaching out!', 'Could you send me your order number?', 'I’ve sent you a custom planner request so we can talk details.'];
 
-export function ContactThread({ admin = false, contactId, embedded = false }) {
+export function ContactThread({ admin = false, contactId, embedded = false, headExtra = null }) {
   const params = useParams();
   const id = contactId || params.id;
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ export function ContactThread({ admin = false, contactId, embedded = false }) {
   if (error) return <main className="page"><p className="error">{error}</p><Link to="/"><u>Home</u></Link></main>;
 
   const name = contact.name || contact.email;
+  const lastMineId = [...messages].reverse().find((m) => m.sender === 'admin' && m.kind !== 'quote')?.id;
   const first = (contact.name || '').split(' ')[0] || 'them';
   const Wrapper = embedded ? 'div' : 'main';
 
@@ -110,6 +112,7 @@ export function ContactThread({ admin = false, contactId, embedded = false }) {
         </div>
         {admin && (
           <div className="contact-actions">
+            {headExtra}
             {contact.quote_id ? (
               <Link to={`/messages/q/${contact.quote_id}`} className="btn btn--ghost btn--sm">Open request</Link>
             ) : (
@@ -141,6 +144,7 @@ export function ContactThread({ admin = false, contactId, embedded = false }) {
               <div key={m.id} className={`msg ${mine ? 'msg--mine' : 'msg--theirs'}`}>
                 <p className="msg-meta">{who} · {formatDate(m.created_at, true)}</p>
                 <p className="msg-body">{m.body}</p>
+                {admin && m.id === lastMineId && <SeenLine at={m.read_at} pending="Emailed" />}
               </div>
             );
           })}

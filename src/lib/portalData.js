@@ -84,10 +84,10 @@ export function threadFor(order, messages = []) {
 const AdminContext = createContext(null);
 
 export function AdminDataProvider({ children }) {
-  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [], orderTags: [] });
+  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [], orderTags: [], archive: [] });
 
   const reload = useCallback(async () => {
-    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages, orderTags] = await Promise.all([
+    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages, orderTags, archive] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('order_addons').select('*').order('created_at', { ascending: true }),
       supabase.from('messages').select('id, order_id, sender, kind, body, file_id, read_at, created_at').order('created_at', { ascending: true }),
@@ -98,10 +98,12 @@ export function AdminDataProvider({ children }) {
       supabase.from('contacts').select('*').order('updated_at', { ascending: false }),
       supabase.from('contact_messages').select('id, contact_id, sender, body, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('order_tags').select('*'),
+      supabase.from('inbox_archive').select('*'),
     ]);
     setState({
       loading: false,
       orderTags: orderTags.data ?? [],
+      archive: archive.data ?? [],
       contacts: contacts.data ?? [],
       contactMessages: contactMessages.data ?? [],
       quotes: quotes.data ?? [],
@@ -112,6 +114,18 @@ export function AdminDataProvider({ children }) {
       profiles: profiles.data ?? [],
       notes: notes.data ?? [],
     });
+  }, []);
+
+  // Who's in the portal right now (customers only announce themselves; you never do)
+  const [online, setOnline] = useState(() => new Set());
+  useEffect(() => {
+    const channel = supabase.channel('portal-online');
+    const sync = () => {
+      const st = channel.presenceState();
+      setOnline(new Set(Object.values(st).flat().map((p) => String(p.email || '').toLowerCase()).filter(Boolean)));
+    };
+    channel.on('presence', { event: 'sync' }, sync).on('presence', { event: 'join' }, sync).on('presence', { event: 'leave' }, sync).subscribe();
+    return () => supabase.removeChannel(channel);
   }, []);
 
   useEffect(() => {
@@ -131,6 +145,7 @@ export function AdminDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_tags' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_archive' }, soon)
       .subscribe(onConnected(soon));
     const stop = keepFresh(reload);
     return () => {
@@ -180,10 +195,83 @@ export function AdminDataProvider({ children }) {
       })
       .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
     const tagsByOrder = Object.fromEntries(state.orderTags.map((t) => [t.order_id, t.tags || []]));
+
+    // ----- one conversation per customer, across all their orders -----
+    const archiveByKey = Object.fromEntries(state.archive.map((a) => [a.thread_key, a]));
+    const lastCustomerAt = (msgs) => {
+      const m = [...msgs].reverse().find((x) => x.sender === 'customer');
+      return m ? new Date(m.created_at).getTime() : 0;
+    };
+    // Your choice wins until the customer writes again; otherwise finished conversations archive on their own
+    const archivedState = (key, msgs, autoDone) => {
+      const a = archiveByKey[key];
+      if (a && new Date(a.set_at).getTime() >= lastCustomerAt(msgs)) return a.state === 'archived';
+      return autoDone && !msgs.some((m) => m.sender === 'customer' && !m.read_at);
+    };
+    const ordersByEmail = {};
+    for (const o of state.orders) (ordersByEmail[o.customer_email.toLowerCase()] ||= []).push(o);
+    const customerThreads = Object.values(
+      threads.reduce((acc, t) => {
+        const email = t.order.customer_email.toLowerCase();
+        (acc[email] ||= { email, threads: [] }).threads.push(t);
+        return acc;
+      }, {})
+    )
+      .map((g) => {
+        const all = ordersByEmail[g.email] || [];
+        const msgs = g.threads.flatMap((t) => messagesByOrder[t.order.id] || []);
+        const latest = g.threads.reduce((a, b) => (new Date(b.lastAt) > new Date(a.lastAt) ? b : a));
+        // Orders shown as chips: anything still in progress or with a conversation, the one that needs you first
+        const chips = all
+          .filter((o) => isActive(o) || messagesByOrder[o.id]?.some((m) => m.sender !== 'system'))
+          .map((o) => ({ order: o, thread: g.threads.find((t) => t.order.id === o.id) || threadFor(o, messagesByOrder[o.id] || []) }))
+          .sort((a, b) => (b.thread.unread > 0) - (a.thread.unread > 0) || isActive(b.order) - isActive(a.order) || new Date(a.order.due_at || 8e15) - new Date(b.order.due_at || 8e15) || new Date(b.thread.lastAt) - new Date(a.thread.lastAt));
+        const key = `cust:${g.email}`;
+        const autoDone = all.every((o) => ['complete', 'closed'].includes(o.stage));
+        return {
+          key,
+          type: 'customer',
+          email: g.email,
+          name: latest.order.customer_name || latest.order.customer_email,
+          order: latest.order,
+          chips,
+          best: chips[0]?.order || latest.order,
+          last: latest.last,
+          lastAt: latest.lastAt,
+          unread: g.threads.reduce((n, t) => n + t.unread, 0),
+          needsReply: g.threads.some((t) => t.needsReply && isActive(t.order)) || g.threads.some((t) => t.needsReply && t.unread),
+          hasRevision: g.threads.some((t) => t.hasRevision),
+          archived: archivedState(key, msgs, autoDone),
+        };
+      })
+      .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+    for (const t of quoteThreads) {
+      t.key = `quote:${t.quote.id}`;
+      t.archived = archivedState(t.key, qmByQuote[t.quote.id] || [], ['paid', 'closed'].includes(t.quote.status));
+    }
+    for (const t of contactThreads) {
+      t.key = `contact:${t.contact.id}`;
+      t.archived = archivedState(t.key, cmByContact[t.contact.id] || [], t.contact.status === 'closed' || Boolean(t.contact.quote_id));
+    }
+    const conversationFor = (orderId) => customerThreads.find((c) => c.chips.some((x) => x.order.id === orderId));
+    const bestOrderFor = (email) => {
+      const c = customerThreads.find((x) => x.email === String(email).toLowerCase());
+      if (c) return c.best;
+      return (ordersByEmail[String(email).toLowerCase()] || []).sort((a, b) => isActive(b) - isActive(a) || new Date(b.created_at) - new Date(a.created_at))[0];
+    };
+    const setArchived = async (key, archived) => {
+      setState((st) => ({ ...st, archive: [...st.archive.filter((a) => a.thread_key !== key), { thread_key: key, state: archived ? 'archived' : 'open', set_at: new Date().toISOString() }] }));
+      await supabase.from('inbox_archive').upsert({ thread_key: key, state: archived ? 'archived' : 'open', set_at: new Date().toISOString() });
+    };
     return {
       ...state,
       reload,
       tagsByOrder,
+      customerThreads,
+      conversationFor,
+      bestOrderFor,
+      setArchived,
+      isOnline: (email) => online.has(String(email || '').toLowerCase()),
       contactThreads,
       addonsByOrder,
       messagesByOrder,
@@ -193,9 +281,9 @@ export function AdminDataProvider({ children }) {
       openQuotes: state.quotes.filter((q) => q.status === 'open').length,
       totalFor: (o) => orderTotal(o, addonsByOrder[o.id]),
       activeCount: state.orders.filter(isActive).length,
-      unreadThreads: threads.filter((t) => t.unread > 0).length + quoteThreads.filter((t) => t.unread > 0).length + contactThreads.filter((t) => t.unread > 0).length,
+      unreadThreads: customerThreads.filter((t) => t.unread > 0).length + quoteThreads.filter((t) => t.unread > 0).length + contactThreads.filter((t) => t.unread > 0).length,
     };
-  }, [state, reload]);
+  }, [state, reload, online]);
 
   return createElement(AdminContext.Provider, { value }, children);
 }
@@ -208,7 +296,25 @@ export function useAdmin() {
 
 const CustomerContext = createContext(null);
 
+// Lets Kerry see when a customer has the portal open. Customers never see Kerry's status.
+function useAnnouncePresence(email) {
+  useEffect(() => {
+    if (!email) return undefined;
+    const channel = supabase.channel('portal-online', { config: { presence: { key: email.toLowerCase() } } });
+    const show = () => (document.visibilityState === 'visible' ? channel.track({ email: email.toLowerCase() }) : channel.untrack());
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') show();
+    });
+    document.addEventListener('visibilitychange', show);
+    return () => {
+      document.removeEventListener('visibilitychange', show);
+      supabase.removeChannel(channel);
+    };
+  }, [email]);
+}
+
 export function CustomerDataProvider({ email, children }) {
+  useAnnouncePresence(email);
   const [state, setState] = useState({ loading: true, orders: [], messages: [], profile: null, quotes: [], quoteMessages: [], contacts: [], contactMessages: [] });
 
   const reload = useCallback(async () => {

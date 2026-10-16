@@ -102,7 +102,12 @@ export function avatarKind(order) {
   return '';
 }
 
-export function Avatar({ name, tone = '', kind = '' }) {
+export function Avatar({ name, tone = '', kind = '', online = false }) {
   const letter = (name || '?').trim().charAt(0).toUpperCase();
-  return <span className={`avatar ${kind} ${tone}`}>{letter}</span>;
+  return (
+    <span className={`avatar ${kind} ${tone}${online ? ' avatar--online' : ''}`}>
+      {letter}
+      {online && <i className="avatar-online" aria-label="Online now" />}
+    </span>
+  );
 }
