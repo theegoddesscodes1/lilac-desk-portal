@@ -4,7 +4,7 @@ import { stageInfo } from '../../portal-config';
 import { useOrderData } from '../../lib/orderApi';
 import { ago, money, useAdmin } from '../../lib/portalData';
 import { QuoteThread } from '../QuotePages';
-import { Avatar } from '../../components/Bits';
+import { Avatar, avatarKind } from '../../components/Bits';
 import ChatPanel from '../../components/ChatPanel';
 import Icon from '../../components/Icons';
 import { dueText, shortPlanner } from './AdminHome';
@@ -27,7 +27,7 @@ function Conversation({ orderId }) {
     <div className="convo">
       <div className="convo-head">
         <Link to="/messages" className="convo-back" aria-label="All messages"><Icon name="back" /></Link>
-        <Avatar name={name} />
+        <Avatar name={name} kind={avatarKind(order)} />
         <div className="convo-who">
           <Link to={`/customers/${encodeURIComponent(order.customer_email)}`} className="chat-name"><u>{name}</u></Link>
           {order.brief?.businessName && <span className="muted"> · {order.brief.businessName}</span>}
@@ -76,7 +76,7 @@ export default function AdminMessages() {
             const qpreview = t.last ? `${t.last.sender === 'admin' ? 'You: ' : ''}${t.last.kind === 'quote' ? 'Quote sent' : t.last.body || ''}` : '';
             return (
               <Link key={t.key} to={`/messages/q/${q.id}`} className={`thread${qid === q.id ? ' thread--on' : ''}${t.unread ? ' thread--unread' : ''}`}>
-                <Avatar name={qname} />
+                <Avatar name={qname} kind="avatar--dark" />
                 <span className="thread-body">
                   <span className="thread-top"><span className="thread-name">{qname}</span><span className="muted small">{ago(t.lastAt)}</span></span>
                   <span className="thread-preview">{qpreview}</span>
@@ -93,7 +93,7 @@ export default function AdminMessages() {
           const preview = t.last ? `${t.last.sender === 'admin' ? 'You: ' : ''}${t.last.body || 'Sent a file'}` : '';
           return (
             <Link key={t.key} to={`/messages/${t.order.id}`} className={`thread${id === t.order.id ? ' thread--on' : ''}${t.unread ? ' thread--unread' : ''}`}>
-              <Avatar name={name} />
+              <Avatar name={name} kind={avatarKind(t.order)} />
               <span className="thread-body">
                 <span className="thread-top"><span className="thread-name">{name}</span><span className="muted small">{ago(t.lastAt)}</span></span>
                 <span className="thread-preview">{preview}</span>

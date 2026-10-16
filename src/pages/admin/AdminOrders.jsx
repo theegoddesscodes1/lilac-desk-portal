@@ -1,3 +1,4 @@
+import { stageInfo } from '../../portal-config';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isActive, isDone, money, shortDate, useAdmin } from '../../lib/portalData';
@@ -19,6 +20,26 @@ const LICENSE = [
   { key: 'commercial', label: 'Commercial' },
 ];
 
+// Search by order number (with or without #), name, email, business, or planner type ("premium", "custom commercial")
+function matches(o, term) {
+  const words = term.replace(/#/g, '').split(/\s+/).filter(Boolean);
+  const hay = [
+    o.shopify_order_name,
+    String(o.shopify_order_name || '').replace('#', ''),
+    o.customer_name,
+    o.customer_email,
+    o.brief?.businessName,
+    o.tier,
+    o.license,
+    `${o.tier} ${o.license}`,
+    stageInfo(o.stage).label,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return words.every((w) => hay.includes(w));
+}
+
 export default function AdminOrders() {
   const { loading, orders, addonsByOrder, totalFor } = useAdmin();
   const [status, setStatus] = useState('all');
@@ -32,7 +53,7 @@ export default function AdminOrders() {
       (o) =>
         test(o) &&
         (license === 'any' || o.license === license) &&
-        (!term || [o.shopify_order_name, o.customer_name, o.customer_email, o.brief?.businessName].some((v) => v && String(v).toLowerCase().includes(term)))
+        (!term || matches(o, term))
     );
     const out = [];
     for (const o of shown) {
@@ -59,7 +80,7 @@ export default function AdminOrders() {
         <label className="search">
           <Icon name="search" size={16} />
           <span className="sr-only">Search</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search orders" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Order #, name, or planner" />
         </label>
         <FilterMenu
           groups={[

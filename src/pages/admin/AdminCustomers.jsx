@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { LICENSES } from '../../portal-config';
 import { ago, isActive, money, shortDate, useAdmin } from '../../lib/portalData';
-import { Avatar, StageDot } from '../../components/Bits';
+import { Avatar, avatarKind, StageDot } from '../../components/Bits';
 import Icon from '../../components/Icons';
 import { shortPlanner } from './AdminHome';
 
@@ -41,7 +41,15 @@ export function AdminCustomerList() {
   const [q, setQ] = useState('');
   if (loading) return <p className="muted page-pad">Loading</p>;
   const term = q.trim().toLowerCase();
-  const shown = customers.filter((c) => !term || [c.name, c.email, c.business].some((v) => v && v.toLowerCase().includes(term)));
+  // Every word typed has to match: name, email, business, order numbers, or planner type
+  const shown = customers.filter((c) => {
+    if (!term) return true;
+    const hay = [c.name, c.email, c.business, ...c.orders.flatMap((o) => [o.shopify_order_name, String(o.shopify_order_name || '').replace('#', ''), o.tier, o.license])]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return term.replace(/#/g, '').split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+  });
 
   return (
     <main className="page page--wide">
@@ -50,7 +58,7 @@ export function AdminCustomerList() {
         <label className="search">
           <Icon name="search" size={16} />
           <span className="sr-only">Search</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customers" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, email, or order #" />
         </label>
       </div>
       <p className="muted small">{customers.length} {customers.length === 1 ? 'customer' : 'customers'} · {money(customers.reduce((n, c) => n + c.spent, 0))} all time</p>
@@ -58,7 +66,7 @@ export function AdminCustomerList() {
         <div className="tr tr--cust th"><span>Customer</span><span className="hide-phone">Type</span><span>Orders</span><span className="hide-phone">Last order</span><span className="r">Spent</span></div>
         {shown.map((c) => (
           <Link key={c.email} to={`/customers/${encodeURIComponent(c.email)}`} className="tr tr--cust">
-            <span className="cust-cell"><Avatar name={c.name} /><span>{c.name}<small>{c.business || c.email}</small></span></span>
+            <span className="cust-cell"><Avatar name={c.name} kind={avatarKind(c.orders[0])} /><span>{c.name}<small>{c.business || c.email}</small></span></span>
             <span className="hide-phone">{[...c.licenses].map((l) => LICENSES[l]).join(', ')}</span>
             <span>{c.orders.length}{c.active ? <span className="muted small"> · {c.active} active</span> : null}</span>
             <span className="hide-phone">{shortDate(c.last)}</span>
@@ -126,7 +134,7 @@ export function AdminCustomer() {
       <Link to="/customers" className="back-link"><Icon name="back" size={16} /> Customers</Link>
 
       <div className="cp-head">
-        <Avatar name={c.name} tone="avatar--lg" />
+        <Avatar name={c.name} tone="avatar--lg" kind={avatarKind(c.orders[0])} />
         <div className="cp-who">
           <h1 className="h-page">{c.name}</h1>
           <p className="muted small">{c.business ? `${c.business} · ` : ''}{c.email}</p>

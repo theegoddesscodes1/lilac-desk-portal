@@ -1123,3 +1123,17 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .quote-page .chat-head .btn, .quote-page .convo-head .btn { padding: 7px 10px; font-size: 10.5px; }
   .quote-back { display: flex; }
 }
+
+/* Avatars by planner type: personal lilac, commercial oxblood, custom charcoal */
+.avatar--ox { background: var(--oxblood); color: var(--white); }
+.avatar--dark { background: var(--charcoal); color: var(--white); }
+
+/* Messages filters centered */
+.inbox-head { display: flex; justify-content: center; }
+
+/* Orders toolbar: search keeps its full width; active filter chips drop to their own line */
+@media (max-width: 899px) {
+  .toolbar { flex-wrap: wrap; }
+  .toolbar .search { flex: 1 1 0; min-width: 0; }
+  .toolbar .fchips { order: 3; flex: 0 0 100%; }
+}

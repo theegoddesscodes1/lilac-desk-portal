@@ -94,7 +94,15 @@ export function DeliveryLine({ order, long = false }) {
   );
 }
 
-export function Avatar({ name, tone = '' }) {
+// Avatar colour by planner type: personal lilac, commercial oxblood, custom charcoal
+export function avatarKind(order) {
+  if (!order) return '';
+  if (order.tier === 'custom' || order === 'custom') return 'avatar--dark';
+  if (order.license === 'commercial') return 'avatar--ox';
+  return '';
+}
+
+export function Avatar({ name, tone = '', kind = '' }) {
   const letter = (name || '?').trim().charAt(0).toUpperCase();
-  return <span className={`avatar ${tone}`}>{letter}</span>;
+  return <span className={`avatar ${kind} ${tone}`}>{letter}</span>;
 }

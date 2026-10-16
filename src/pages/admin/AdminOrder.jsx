@@ -7,7 +7,7 @@ import ProofViewer from '../../components/ProofViewer';
 import OrderChecklist from '../../components/OrderChecklist';
 import { supabase } from '../../supabaseClient';
 import { ago, approvedProofNumber, money, orderTotal, shortDate, useAdmin } from '../../lib/portalData';
-import { Avatar, StageDot } from '../../components/Bits';
+import { Avatar, StageDot, avatarKind } from '../../components/Bits';
 import BriefForm from '../../components/BriefForm';
 import FileList from '../../components/FileList';
 import ChatPanel from '../../components/ChatPanel';
@@ -143,7 +143,7 @@ export default function AdminOrder() {
       <Link to="/orders" className="back-link"><Icon name="back" size={16} /> All orders</Link>
 
       <Link to={profile} className="ocust">
-        <Avatar name={name} />
+        <Avatar name={name} kind={avatarKind(order)} />
         <span className="ocust-main">
           <b>{name}</b>
           <small>{order.customer_email}</small>
