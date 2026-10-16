@@ -99,7 +99,7 @@ export function ContactThread({ admin = false, contactId, embedded = false }) {
     <Wrapper className={embedded ? 'convo quote-page' : 'page page--chat quote-page'}>
       <div className={embedded ? 'convo-head' : 'chat-head'}>
         <Link to={admin ? '/messages' : '/'} className="convo-back quote-back" aria-label="Back"><Icon name="back" size={18} /></Link>
-        {admin ? <Avatar name={name} /> : <span className="avatar avatar--ox">{DESIGNER_NAME.charAt(0)}</span>}
+        {admin ? <Avatar name={name} kind="avatar--plain" /> : <span className="avatar avatar--ox">{DESIGNER_NAME.charAt(0)}</span>}
         <div className="convo-who">
           <p className="chat-name">{admin ? name : DESIGNER_NAME}</p>
           <p className="muted small">

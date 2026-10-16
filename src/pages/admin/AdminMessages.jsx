@@ -79,7 +79,7 @@ export default function AdminMessages() {
             const cpreview = t.last ? `${t.last.sender === 'admin' ? 'You: ' : ''}${t.last.body || ''}` : '';
             return (
               <Link key={t.key} to={`/messages/c/${c.id}`} className={`thread${cid === c.id ? ' thread--on' : ''}${t.unread ? ' thread--unread' : ''}`}>
-                <Avatar name={cname} />
+                <Avatar name={cname} kind="avatar--plain" />
                 <span className="thread-body">
                   <span className="thread-top"><span className="thread-name">{cname}</span><span className="muted small">{ago(t.lastAt)}</span></span>
                   <span className="thread-preview">{cpreview}</span>

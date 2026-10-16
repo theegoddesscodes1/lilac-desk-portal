@@ -1224,3 +1224,6 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .inbox-head .seg { display: flex; width: 100%; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .inbox-head .seg::-webkit-scrollbar { display: none; }
 .inbox-head .seg button { flex: 1 0 auto; padding: 6px 10px; }
+/* Contact-page people (not customers yet): plain outlined avatar */
+.avatar--plain { background: #fff; color: var(--charcoal); box-shadow: inset 0 0 0 1px var(--greige); }
+.thread--on .avatar--plain { background: var(--white); }

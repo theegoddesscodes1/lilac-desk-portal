@@ -135,7 +135,7 @@ export default function AdminNotifications({ seenAt, onSeen }) {
           <p className="label muted">{g.label}</p>
           {g.items.map((item) => (
             <Link key={item.id} to={item.to} className={`nrow${isNew(item, seenAt) ? ' nrow--new' : ''}`}>
-              <Avatar name={item.order.customer_name || item.order.customer_email} kind={item.kind === 'quote' || item.kind === 'quotemsg' ? 'avatar--dark' : avatarKind(item.order)} />
+              <Avatar name={item.order.customer_name || item.order.customer_email} kind={item.kind === 'quote' || item.kind === 'quotemsg' ? 'avatar--dark' : item.kind === 'contact' ? 'avatar--plain' : avatarKind(item.order)} />
               <span className="nrow-body">
                 <span className="nrow-text">{item.text}</span>
                 {item.sub && <span className="nrow-sub">{item.sub}</span>}
