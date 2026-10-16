@@ -1218,3 +1218,9 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .contact-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .noorder-contacts { margin-top: 40px; max-width: 460px; }
 .mini-row .dot { display: inline-block; vertical-align: middle; margin-right: 4px; }
+
+/* ---------- v14: inbox filters stay on one line ---------- */
+.seg button { white-space: nowrap; }
+.inbox-head .seg { display: flex; width: 100%; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.inbox-head .seg::-webkit-scrollbar { display: none; }
+.inbox-head .seg button { flex: 1 0 auto; padding: 6px 10px; }
