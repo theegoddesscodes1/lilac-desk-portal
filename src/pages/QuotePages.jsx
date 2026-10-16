@@ -161,6 +161,11 @@ function SendQuote({ quote, onDone }) {
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const missing = [
+    !(Number(price) > 0) && 'a price',
+    !scope.trim() && 'what’s included',
+    manual && !url.trim() && 'the checkout link',
+  ].filter(Boolean);
 
   async function send(e) {
     e.preventDefault();
@@ -194,10 +199,10 @@ function SendQuote({ quote, onDone }) {
         ))}
       </div>
       <label className="tool-field"><span className="tool-label">Price (USD)</span>
-        <input className="tool-input" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="350" />
+        <input className="tool-input" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="e.g. 350" />
       </label>
       <label className="tool-field"><span className="tool-label">What’s included</span>
-        <textarea className="qarea" value={scope} onChange={(e) => setScope(e.target.value)} placeholder="120 pages: dated 2027 calendar, weekly + budget + meal planner, landscape, tabless. 3 change rounds. Delivery in about 3 weeks." />
+        <textarea className="qarea" value={scope} onChange={(e) => setScope(e.target.value)} placeholder="e.g. 120 pages: dated 2027 calendar, weekly + budget + meal planner, landscape, tabless. 3 change rounds. Delivery in about 3 weeks." />
       </label>
       <label className="qcheck qcheck--ctl">
         <input type="checkbox" checked={manual} onChange={(e) => setManual(e.target.checked)} />
@@ -206,9 +211,12 @@ function SendQuote({ quote, onDone }) {
       </label>
       {manual && <input className="tool-input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://lilacdesk.com/…/invoices/…" />}
       {error && <p className="error">{error}</p>}
-      <button type="submit" className="btn btn--sm" disabled={busy || !(Number(price) > 0) || !scope.trim() || (manual && !url)}>
-        {busy ? 'Creating invoice…' : `Send quote${Number(price) > 0 ? ` · ${money(Number(price))}` : ''}`}
-      </button>
+      <div className="send-quote-foot">
+        <button type="submit" className="btn btn--ox btn--sm" disabled={busy || missing.length > 0}>
+          {busy ? 'Creating invoice…' : `Send quote${Number(price) > 0 ? ` · ${money(Number(price))}` : ''}`}
+        </button>
+        {missing.length > 0 && !busy && <span className="small muted">Add {missing.join(' and ')}</span>}
+      </div>
     </form>
   );
 }
