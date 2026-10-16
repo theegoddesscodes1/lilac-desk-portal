@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { NO_RESPONSE_DAYS, WAITING_ON_CUSTOMER, plannerLabel } from '../../portal-config';
+import { FIX_WINDOW_DAYS, NO_RESPONSE_DAYS, WAITING_ON_CUSTOMER, plannerLabel } from '../../portal-config';
 import { daysSince, formatDate, proofRounds, useOrderData } from '../../lib/orderApi';
 import { RoundList, verdictText } from '../../components/ProofRounds';
 import ProofViewer from '../../components/ProofViewer';
@@ -13,17 +13,23 @@ import Icon from '../../components/Icons';
 import { DueAndRevisions, StageControl, Uploader } from '../../components/AdminControls';
 import { dueText } from './AdminHome';
 
+// Where the order stands, then what to do: shown as two separate lines
 const NEXT = {
-  order_placed: (n) => `Waiting on ${n} to fill in the brief.`,
-  brief_received: () => 'The brief is in. Time to start designing.',
-  designing: () => 'Designing. Upload the first proof when it’s ready.',
-  proof_ready: (n) => `Waiting on ${n} to review the latest proof.`,
-  revisions: (n) => `${n} asked for changes. Make them and upload the next proof.`,
-  approved: (n, p) => `${n} approved ${p ? `proof ${p}` : 'the proof'}. Upload the final files.`,
-  delivered: () => 'Delivered. Mark it complete once the fix window is over.',
-  complete: () => 'Complete.',
-  closed: () => 'Closed.',
+  order_placed: (n) => [`Waiting on ${n}’s brief.`, 'Nothing to do until it’s in.'],
+  brief_received: () => ['The brief is in.', 'Time to start designing.'],
+  designing: () => ['Designing.', 'Upload the first proof when it’s ready.'],
+  proof_ready: (n) => [`Waiting on ${n}.`, 'They’re reviewing the latest proof.'],
+  revisions: (n) => [`${n} asked for changes.`, 'Make them and upload the next proof.'],
+  approved: (n, p) => [`${n} approved ${p ? `proof ${p}` : 'the proof'}.`, 'Upload the final files.'],
+  delivered: (n, p, o) => ['Delivered.', `It completes on its own on ${fixEnds(o)}, when the ${FIX_WINDOW_DAYS}-day fix window ends.`],
+  complete: () => ['Complete.', 'Nothing left to do.'],
+  closed: () => ['Closed.', 'This order is no longer active.'],
 };
+
+function fixEnds(order) {
+  if (!order?.delivered_at) return 'its own';
+  return shortDate(new Date(new Date(order.delivered_at).getTime() + FIX_WINDOW_DAYS * 86400000).toISOString());
+}
 
 const DONE = ['delivered', 'complete'];
 
@@ -175,7 +181,15 @@ export default function AdminOrder() {
 
           {tab === 'overview' && (
             <div className="ov">
-              <p className="lead lead--it ov-next">{NEXT[order.stage]?.(first, approvedNo)}</p>
+              {(() => {
+                const [now, todo] = NEXT[order.stage]?.(first, approvedNo, order) ?? [];
+                return (
+                  <div className="ov-next">
+                    <p className="lead lead--it">{now}</p>
+                    {todo && <p className="ov-todo">{todo}</p>}
+                  </div>
+                );
+              })()}
               {order.tier === 'custom' && order.brief_submitted_at && !order.due_at && (
                 <button type="button" className="due-prompt" onClick={() => setPanel('stage')}>
                   <b>Set the due date</b> · Custom order: {first} sees “confirming soon” until you do.
