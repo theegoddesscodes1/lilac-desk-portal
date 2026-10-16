@@ -1,0 +1,9 @@
+{
+  "sections": {
+    "main": {
+      "type": "luna-contact",
+      "settings": {}
+    }
+  },
+  "order": ["main"]
+}

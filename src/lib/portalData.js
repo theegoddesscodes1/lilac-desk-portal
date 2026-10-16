@@ -84,10 +84,10 @@ export function threadFor(order, messages = []) {
 const AdminContext = createContext(null);
 
 export function AdminDataProvider({ children }) {
-  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [] });
+  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [] });
 
   const reload = useCallback(async () => {
-    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages] = await Promise.all([
+    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('order_addons').select('*').order('created_at', { ascending: true }),
       supabase.from('messages').select('id, order_id, sender, kind, body, file_id, read_at, created_at').order('created_at', { ascending: true }),
@@ -95,9 +95,13 @@ export function AdminDataProvider({ children }) {
       supabase.from('customer_notes').select('*'),
       supabase.from('quotes').select('*').order('created_at', { ascending: false }),
       supabase.from('quote_messages').select('id, quote_id, sender, kind, body, read_at, created_at').order('created_at', { ascending: true }),
+      supabase.from('contacts').select('*').order('updated_at', { ascending: false }),
+      supabase.from('contact_messages').select('id, contact_id, sender, body, read_at, created_at').order('created_at', { ascending: true }),
     ]);
     setState({
       loading: false,
+      contacts: contacts.data ?? [],
+      contactMessages: contactMessages.data ?? [],
       quotes: quotes.data ?? [],
       quoteMessages: quoteMessages.data ?? [],
       orders: orders.data ?? [],
@@ -122,6 +126,8 @@ export function AdminDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_addons' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_messages' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, soon)
       .subscribe(onConnected(soon));
     const stop = keepFresh(reload);
     return () => {
@@ -154,9 +160,26 @@ export function AdminDataProvider({ children }) {
         };
       })
       .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+    // Messages from the Contact page
+    const cmByContact = groupBy(state.contactMessages, 'contact_id');
+    const contactThreads = state.contacts
+      .map((c) => {
+        const msgs = cmByContact[c.id] ?? [];
+        const real = msgs.filter((m) => m.sender !== 'system');
+        const last = real[real.length - 1] || msgs[msgs.length - 1] || null;
+        return {
+          contact: c,
+          last,
+          lastAt: last?.created_at ?? c.created_at,
+          unread: msgs.filter((m) => m.sender === 'customer' && !m.read_at).length,
+          needsReply: c.status === 'open' && real.length > 0 && real[real.length - 1].sender === 'customer',
+        };
+      })
+      .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
     return {
       ...state,
       reload,
+      contactThreads,
       addonsByOrder,
       messagesByOrder,
       threads,
@@ -165,7 +188,7 @@ export function AdminDataProvider({ children }) {
       openQuotes: state.quotes.filter((q) => q.status === 'open').length,
       totalFor: (o) => orderTotal(o, addonsByOrder[o.id]),
       activeCount: state.orders.filter(isActive).length,
-      unreadThreads: threads.filter((t) => t.unread > 0).length + quoteThreads.filter((t) => t.unread > 0).length,
+      unreadThreads: threads.filter((t) => t.unread > 0).length + quoteThreads.filter((t) => t.unread > 0).length + contactThreads.filter((t) => t.unread > 0).length,
     };
   }, [state, reload]);
 
@@ -181,15 +204,17 @@ export function useAdmin() {
 const CustomerContext = createContext(null);
 
 export function CustomerDataProvider({ email, children }) {
-  const [state, setState] = useState({ loading: true, orders: [], messages: [], profile: null, quotes: [], quoteMessages: [] });
+  const [state, setState] = useState({ loading: true, orders: [], messages: [], profile: null, quotes: [], quoteMessages: [], contacts: [], contactMessages: [] });
 
   const reload = useCallback(async () => {
-    const [orders, messages, profile, quotes, quoteMessages] = await Promise.all([
+    const [orders, messages, profile, quotes, quoteMessages, contacts, contactMessages] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('messages').select('id, order_id, sender, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('customer_profiles').select('*').ilike('email', email).maybeSingle(),
       supabase.from('quotes').select('*').order('created_at', { ascending: false }),
       supabase.from('quote_messages').select('id, quote_id, sender, read_at, created_at').order('created_at', { ascending: true }),
+      supabase.from('contacts').select('*').order('updated_at', { ascending: false }),
+      supabase.from('contact_messages').select('id, contact_id, sender, read_at, created_at').order('created_at', { ascending: true }),
     ]);
     setState({
       loading: false,
@@ -198,6 +223,8 @@ export function CustomerDataProvider({ email, children }) {
       profile: profile.data ?? null,
       quotes: quotes.data ?? [],
       quoteMessages: quoteMessages.data ?? [],
+      contacts: contacts.data ?? [],
+      contactMessages: contactMessages.data ?? [],
     });
   }, [email]);
 
@@ -209,6 +236,7 @@ export function CustomerDataProvider({ email, children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_messages' }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, reload)
       .subscribe(onConnected(reload));
     const stop = keepFresh(reload);
     return () => {
@@ -226,7 +254,9 @@ export function CustomerDataProvider({ email, children }) {
       state.quoteMessages.filter((m) => m.quote_id === quoteId && m.sender !== 'customer' && !m.read_at).length;
     // A quote still being discussed (not yet paid or closed)
     const openQuote = state.quotes.find((q) => q.status === 'open' || q.status === 'quoted') || null;
-    return { ...state, email, reload, current, unreadFor, unreadQuote, openQuote };
+    const unreadContact = (contactId) =>
+      state.contactMessages.filter((m) => m.contact_id === contactId && m.sender === 'admin' && !m.read_at).length;
+    return { ...state, email, reload, current, unreadFor, unreadQuote, openQuote, unreadContact };
   }, [state, email, reload]);
 
   return createElement(CustomerContext.Provider, { value }, children);

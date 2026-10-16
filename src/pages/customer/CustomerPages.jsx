@@ -14,6 +14,7 @@ import ChatPanel from '../../components/ChatPanel';
 import AddExtras from '../../components/AddExtras';
 import Icon from '../../components/Icons';
 import { DeclinePanel, QuoteCard } from '../QuotePages';
+import { ContactRows } from '../ContactPages';
 
 function useOrder() {
   const { id } = useParams();
@@ -21,7 +22,7 @@ function useOrder() {
 }
 
 function NoOrder({ title }) {
-  const { email } = useCustomer();
+  const { email, contacts, unreadContact } = useCustomer();
   return (
     <main className="page page--narrow empty-state">
       <p className="label muted">Your orders</p>
@@ -37,6 +38,7 @@ function NoOrder({ title }) {
         <a href={`${SHOP_URL}/pages/custom-planners`} className="btn btn--ghost">See planner tiers</a>
         <button type="button" className="btn btn--ghost" onClick={signOut}>Sign out</button>
       </div>
+      {contacts?.length > 0 && <div className="noorder-contacts"><ContactRows contacts={contacts} unreadContact={unreadContact} /></div>}
     </main>
   );
 }
@@ -61,7 +63,7 @@ export function CustomerRoot() {
 const QUOTE_STEPS = ['Request', 'Quote', 'Pay', 'Brief'];
 
 function QuoteHome({ quote }) {
-  const { unreadQuote } = useCustomer();
+  const { unreadQuote, contacts, unreadContact } = useCustomer();
   const [declining, setDeclining] = useState(false);
   const chat = `/quotes/${quote.id}`;
   const unread = unreadQuote(quote.id);
@@ -128,6 +130,7 @@ function QuoteHome({ quote }) {
               <Link to={chat} className="small"><u>{quote.status === 'closed' ? 'View the conversation' : 'Open the conversation'}</u></Link>
             </div>
           )}
+          <ContactRows contacts={(contacts || []).filter((c) => c.quote_id !== quote.id)} unreadContact={unreadContact} />
         </div>
       </div>
     </main>
@@ -163,7 +166,7 @@ function nextStep(order, proofCount, base) {
 
 export function CustomerHome() {
   const { loading, error, order, files, messages, orderAddons, addons } = useOrder();
-  const { orders, openQuote } = useCustomer();
+  const { orders, openQuote, contacts, unreadContact } = useCustomer();
   if (loading || error) return <Loading error={error} />;
 
   const base = `/orders/${order.id}`;
@@ -226,6 +229,8 @@ export function CustomerHome() {
               <span className="small"><u>Ask</u></span>
             </Link>
           )}
+
+          <ContactRows contacts={(contacts || []).filter((c) => !c.quote_id && (c.status === 'open' || unreadContact(c.id)))} unreadContact={unreadContact} />
 
           {otherActive.length > 0 && (
             <div className="home-list">

@@ -4,6 +4,7 @@ import { stageInfo } from '../../portal-config';
 import { useOrderData } from '../../lib/orderApi';
 import { ago, money, useAdmin } from '../../lib/portalData';
 import { QuoteThread } from '../QuotePages';
+import { ContactThread } from '../ContactPages';
 import { Avatar, avatarKind } from '../../components/Bits';
 import ChatPanel from '../../components/ChatPanel';
 import Icon from '../../components/Icons';
@@ -14,6 +15,7 @@ const FILTERS = [
   { key: 'unread', label: 'Unread' },
   { key: 'reply', label: 'Needs reply' },
   { key: 'quotes', label: 'Quotes' },
+  { key: 'contact', label: 'Contact' },
 ];
 
 const QUICK = ['Got it, working on it now.', 'Your new proof is up.', 'Your final files are ready to download.'];
@@ -44,8 +46,8 @@ function Conversation({ orderId }) {
 }
 
 export default function AdminMessages() {
-  const { id, qid } = useParams();
-  const { loading, threads, quoteThreads } = useAdmin();
+  const { id, qid, cid } = useParams();
+  const { loading, threads, quoteThreads, contactThreads } = useAdmin();
   const [filter, setFilter] = useState('all');
 
   // Order chats and custom planner requests in one list, newest first
@@ -53,16 +55,17 @@ export default function AdminMessages() {
     const all = [
       ...threads.map((t) => ({ ...t, type: 'order', key: t.order.id })),
       ...(quoteThreads ?? []).map((t) => ({ ...t, type: 'quote', key: `q-${t.quote.id}` })),
+      ...(contactThreads ?? []).filter((t) => !t.contact.quote_id).map((t) => ({ ...t, type: 'contact', key: `c-${t.contact.id}` })),
     ].sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
     return all.filter((t) =>
-      filter === 'unread' ? t.unread > 0 : filter === 'reply' ? t.needsReply : filter === 'quotes' ? t.type === 'quote' : true
+      filter === 'unread' ? t.unread > 0 : filter === 'reply' ? t.needsReply : filter === 'quotes' ? t.type === 'quote' : filter === 'contact' ? t.type === 'contact' : true
     );
-  }, [threads, quoteThreads, filter]);
+  }, [threads, quoteThreads, contactThreads, filter]);
 
   if (loading) return <p className="muted page-pad">Loading</p>;
 
   return (
-    <main className={`inbox${id || qid ? ' inbox--open' : ''}`}>
+    <main className={`inbox${id || qid || cid ? ' inbox--open' : ''}`}>
       <div className="inbox-list">
         <div className="inbox-head">
           <h1 className="sr-only">Messages</h1>
@@ -70,6 +73,25 @@ export default function AdminMessages() {
         </div>
         {shown.length === 0 && <p className="muted inbox-empty">{filter === 'all' ? 'No conversations yet.' : 'Nothing here.'}</p>}
         {shown.map((t) => {
+          if (t.type === 'contact') {
+            const c = t.contact;
+            const cname = c.name || c.email;
+            const cpreview = t.last ? `${t.last.sender === 'admin' ? 'You: ' : ''}${t.last.body || ''}` : '';
+            return (
+              <Link key={t.key} to={`/messages/c/${c.id}`} className={`thread${cid === c.id ? ' thread--on' : ''}${t.unread ? ' thread--unread' : ''}`}>
+                <Avatar name={cname} />
+                <span className="thread-body">
+                  <span className="thread-top"><span className="thread-name">{cname}</span><span className="muted small">{ago(t.lastAt)}</span></span>
+                  <span className="thread-preview">{cpreview}</span>
+                  <span className="thread-meta">
+                    <span className="ntag">Contact</span>
+                    {t.unread > 0 && <span className="dot" />}
+                    <span className="muted small">{c.status === 'closed' ? 'Done' : c.topic}</span>
+                  </span>
+                </span>
+              </Link>
+            );
+          }
           if (t.type === 'quote') {
             const q = t.quote;
             const qname = q.name || q.email;
@@ -108,7 +130,7 @@ export default function AdminMessages() {
         })}
       </div>
       <div className="inbox-chat">
-        {qid ? <QuoteThread key={qid} admin quoteId={qid} embedded /> : id ? <Conversation key={id} orderId={id} /> : <p className="muted inbox-pick hide-phone">Choose a conversation.</p>}
+        {cid ? <ContactThread key={cid} admin contactId={cid} embedded /> : qid ? <QuoteThread key={qid} admin quoteId={qid} embedded /> : id ? <Conversation key={id} orderId={id} /> : <p className="muted inbox-pick hide-phone">Choose a conversation.</p>}
       </div>
     </main>
   );

@@ -28,7 +28,7 @@ function writeSeen(t) {
 // New = after the last visit to this page, and (for messages) not already opened in the chat
 export const isNew = (item, seenAt) => new Date(item.at).getTime() > seenAt && !item.readAt;
 
-export function buildFeed({ orders, orderAddons, messages, quotes = [], quoteMessages = [] }) {
+export function buildFeed({ orders, orderAddons, messages, quotes = [], quoteMessages = [], contacts = [], contactMessages = [] }) {
   const byId = Object.fromEntries(orders.map((o) => [o.id, o]));
   const who = (o) => firstName(o);
   const items = [];
@@ -74,6 +74,18 @@ export function buildFeed({ orders, orderAddons, messages, quotes = [], quoteMes
     if (q.paid_at) items.push({ id: `qp-${q.id}`, at: q.paid_at, order: { customer_name: q.name, customer_email: q.email }, kind: 'order', text: <>{q.name || q.email} paid their quote</>, sub: money(q.price), to: q.order_id ? `/orders/${q.order_id}` : `/messages/q/${q.id}` });
   }
 
+  // Messages from the Contact page
+  const contactById = Object.fromEntries(contacts.map((c) => [c.id, c]));
+  const seenContact = new Set();
+  for (const m of contactMessages) {
+    const c = contactById[m.contact_id];
+    if (!c || m.sender !== 'customer') continue;
+    const person = { customer_name: c.name, customer_email: c.email };
+    const firstMsg = !seenContact.has(c.id);
+    seenContact.add(c.id);
+    items.push({ id: `cm-${m.id}`, at: m.created_at, order: person, kind: 'contact', text: firstMsg ? <>{c.name || c.email} sent a message · {c.topic}</> : <>{firstName(person)} replied to your message</>, sub: m.body, to: `/messages/c/${c.id}`, readAt: m.read_at });
+  }
+
   return items.filter((i) => i.at).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 80);
 }
 
@@ -87,7 +99,7 @@ function bucket(at) {
   return 'Earlier';
 }
 
-const TAG = { changes: 'Changes', approved: 'Approved', addon: 'Add-on', brief: 'Brief', order: 'New order', quote: 'Request', quotemsg: 'Quote' };
+const TAG = { changes: 'Changes', approved: 'Approved', addon: 'Add-on', brief: 'Brief', order: 'New order', quote: 'Request', quotemsg: 'Quote', contact: 'Contact' };
 
 export default function AdminNotifications({ seenAt, onSeen }) {
   const data = useAdmin();

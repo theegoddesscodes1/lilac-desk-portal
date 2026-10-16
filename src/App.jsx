@@ -10,6 +10,7 @@ import Icon from './components/Icons';
 import LoginPage from './pages/LoginPage';
 import SettingsPage from './pages/SettingsPage';
 import { QuoteRequestPage, QuoteThread } from './pages/QuotePages';
+import { ContactThread } from './pages/ContactPages';
 import AdminHome from './pages/admin/AdminHome';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrder from './pages/admin/AdminOrder';
@@ -23,6 +24,11 @@ import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerP
 function QuoteRedirect() {
   const { id } = useParams();
   return <Navigate to={`/messages/q/${id}`} replace />;
+}
+
+function ContactRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/messages/c/${id}`} replace />;
 }
 
 function AdminApp({ email }) {
@@ -66,7 +72,9 @@ function AdminApp({ email }) {
         <Route path="/messages" element={<AdminMessages />} />
         <Route path="/messages/:id" element={<AdminMessages />} />
         <Route path="/messages/q/:qid" element={<AdminMessages />} />
+        <Route path="/messages/c/:cid" element={<AdminMessages />} />
         <Route path="/quotes/:id" element={<QuoteRedirect />} />
+        <Route path="/contact/:id" element={<ContactRedirect />} />
         <Route path="/income" element={<AdminIncome />} />
         <Route path="/customers" element={<AdminCustomerList />} />
         <Route path="/customers/:email" element={<AdminCustomer />} />
@@ -121,6 +129,7 @@ function CustomerApp({ email }) {
         <Route path="/orders/:id/files" element={<CustomerFiles />} />
         <Route path="/quote/new" element={<QuoteRequestPage defaultName={profileName} />} />
         <Route path="/quotes/:id" element={<QuoteThread />} />
+        <Route path="/contact/:id" element={<ContactThread />} />
         <Route path="/settings" element={<SettingsPage email={email} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

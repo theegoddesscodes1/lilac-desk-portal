@@ -1,0 +1,228 @@
+{%- comment -%}
+  Luna Contact — sends messages straight to the Lilac Desk portal inbox (with a phone notification),
+  instead of Shopify's contact email. Needs the portal-contact Supabase function with "Verify JWT" turned off.
+{%- endcomment -%}
+{%- assign sid = section.id -%}
+{%- assign lct_endpoint = section.settings.supabase_url | strip | remove: '/functions/v1/portal-contact' | append: '/functions/v1/portal-contact' -%}
+{%- assign lct_name = '' -%}
+{%- assign lct_email = '' -%}
+{%- if customer -%}
+  {%- assign lct_name = customer.name -%}
+  {%- assign lct_email = customer.email -%}
+{%- endif -%}
+{%- assign lct_topics = 'Order question,Custom planner,Wholesale or collab,Something else' | split: ',' -%}
+
+<style>
+  #lct-{{ sid }} {
+    --c: #333333; --w: #FAFAF8; --l: #D6D0DE; --o: #5C181E; --g: #D5D2CC;
+    --serif: 'Times New Roman', Times, serif;
+    --sans: 'Jost', sans-serif;
+    background: var(--w); color: var(--c);
+    font-family: var(--sans); font-weight: 300; font-size: 15px; line-height: 1.65;
+    padding: clamp(36px, 6vw, 72px) 16px clamp(48px, 7vw, 96px);
+  }
+  #lct-{{ sid }} *, #lct-{{ sid }} *::before, #lct-{{ sid }} *::after { box-sizing: border-box; }
+  #lct-{{ sid }} p { margin: 0; }
+  #lct-{{ sid }} .lct-wrap { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: clamp(32px, 6vw, 80px); }
+  #lct-{{ sid }} .lct-eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--o); margin-bottom: 10px; }
+  #lct-{{ sid }} h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(28px, 3.4vw, 34px); line-height: 1.15; margin: 0 0 14px; color: var(--c); letter-spacing: 0; text-transform: none; }
+  #lct-{{ sid }} .lct-lead { color: #5e5a55; margin-bottom: 26px; }
+  #lct-{{ sid }} .lct-facts { border-top: 1px solid var(--c); }
+  #lct-{{ sid }} .lct-fact { padding: 14px 0; border-bottom: 1px solid var(--g); font-size: 14px; }
+  #lct-{{ sid }} .lct-fact b { display: block; font-weight: 400; }
+  #lct-{{ sid }} .lct-fact span { color: #6c6862; font-size: 13px; }
+  #lct-{{ sid }} .lct-fact a { color: var(--c); text-underline-offset: 3px; }
+
+  #lct-{{ sid }} form { margin: 0; border-top: 1px solid var(--c); padding-top: 4px; }
+  #lct-{{ sid }} .lct-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+  #lct-{{ sid }} .lct-q { padding: 12px 0; }
+  #lct-{{ sid }} .lct-l { display: block; font-size: 14px; font-weight: 400; margin-bottom: 8px; }
+  #lct-{{ sid }} .lct-l small { font-weight: 300; font-size: 12px; color: #8a867f; margin-left: 6px; }
+  #lct-{{ sid }} input[type=text], #lct-{{ sid }} input[type=email], #lct-{{ sid }} textarea {
+    width: 100%; font: inherit; font-weight: 400; color: var(--c); background: #fff;
+    border: 1px solid var(--g); border-radius: 14px; padding: 12px 14px; margin: 0; box-shadow: none; min-height: 0;
+  }
+  #lct-{{ sid }} input[type=text], #lct-{{ sid }} input[type=email] { background: transparent; border: 0; border-bottom: 1px solid var(--g); border-radius: 0; padding: 8px 0; }
+  #lct-{{ sid }} input:focus, #lct-{{ sid }} textarea:focus { outline: none; border-color: var(--c); }
+  #lct-{{ sid }} textarea { min-height: 150px; resize: vertical; line-height: 1.55; }
+  #lct-{{ sid }} .lct-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  #lct-{{ sid }} .lct-pill { position: relative; }
+  #lct-{{ sid }} .lct-pill input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  #lct-{{ sid }} .lct-pill span { display: inline-block; border: 1px solid var(--g); background: #fff; padding: 8px 16px; border-radius: 40px; font-size: 13.5px; line-height: 1.2; cursor: pointer; transition: border-color .15s, color .15s; }
+  #lct-{{ sid }} .lct-pill input:checked + span { border-color: var(--o); color: var(--o); box-shadow: inset 0 0 0 .5px var(--o); }
+  #lct-{{ sid }} .lct-pill input:focus-visible + span { outline: 2px solid var(--o); outline-offset: 2px; }
+  #lct-{{ sid }} .lct-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  #lct-{{ sid }} .lct-order[hidden] { display: none; }
+  #lct-{{ sid }} .lct-submit {
+    display: inline-flex; align-items: center; justify-content: center; margin-top: 18px;
+    padding: 13px 28px; background: var(--c); color: var(--w); border: 1px solid var(--c); border-radius: 0;
+    font-family: var(--sans); font-weight: 400; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+  }
+  #lct-{{ sid }} .lct-submit:hover { background: var(--o); border-color: var(--o); }
+  #lct-{{ sid }} .lct-submit[disabled] { opacity: .5; cursor: default; }
+  #lct-{{ sid }} .lct-small { margin-top: 12px; font-size: 12.5px; color: #8a867f; }
+  #lct-{{ sid }} .lct-error { color: var(--o); margin-top: 14px; font-weight: 400; }
+  #lct-{{ sid }} .lct-done { border: 1px solid var(--g); border-radius: 20px; background: #fff; padding: 28px; }
+  #lct-{{ sid }} .lct-done h2 { font-family: var(--serif); font-weight: 400; font-size: 24px; margin: 0 0 8px; letter-spacing: 0; text-transform: none; color: var(--c); }
+  #lct-{{ sid }} .lct-done p + p { margin-top: 10px; color: #6c6862; font-size: 14px; }
+  #lct-{{ sid }} .lct-again { margin-top: 18px; background: none; border: 1px solid var(--g); border-radius: 40px; padding: 8px 18px; font: inherit; font-size: 13.5px; color: var(--c); cursor: pointer; }
+  @media (max-width: 800px) {
+    #lct-{{ sid }} .lct-wrap { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    #lct-{{ sid }} .lct-row { grid-template-columns: 1fr; }
+    #lct-{{ sid }} .lct-submit { width: 100%; }
+  }
+</style>
+
+<section id="lct-{{ sid }}">
+  <div class="lct-wrap">
+    <div>
+      <p class="lct-eyebrow">{{ section.settings.eyebrow }}</p>
+      <h1>{{ section.settings.heading }}</h1>
+      <p class="lct-lead">{{ section.settings.lead }}</p>
+      <div class="lct-facts">
+        <p class="lct-fact"><b>{{ section.settings.reply_time }}</b><span>You’ll get my reply by email, and the conversation stays in your order portal.</span></p>
+        <p class="lct-fact"><b>Already ordered?</b><span>Proofs, files and messages about your planner live in <a href="{{ section.settings.portal_url }}">your order page</a>.</span></p>
+        <p class="lct-fact"><b>Want something custom?</b><span><a href="{{ section.settings.quote_url }}">Request a custom planner</a> for a quote.</span></p>
+      </div>
+    </div>
+
+    <div>
+      <form id="lct-form-{{ sid }}" novalidate>
+        <div class="lct-row">
+          <div class="lct-q">
+            <label class="lct-l" for="lct-name-{{ sid }}">Name</label>
+            <input type="text" id="lct-name-{{ sid }}" name="name" autocomplete="name" value="{{ lct_name | escape }}" required>
+          </div>
+          <div class="lct-q">
+            <label class="lct-l" for="lct-email-{{ sid }}">Email</label>
+            <input type="email" id="lct-email-{{ sid }}" name="email" autocomplete="email" value="{{ lct_email | escape }}" required>
+          </div>
+        </div>
+        <div class="lct-q">
+          <span class="lct-l">What’s it about?</span>
+          <div class="lct-pills">
+            {%- for topic in lct_topics -%}
+              <label class="lct-pill"><input type="radio" name="topic" value="{{ topic }}"{% if forloop.first %} checked{% endif %}><span>{{ topic }}</span></label>
+            {%- endfor -%}
+          </div>
+        </div>
+        <div class="lct-q lct-order">
+          <label class="lct-l" for="lct-order-{{ sid }}">Order number <small>optional</small></label>
+          <input type="text" id="lct-order-{{ sid }}" name="order" placeholder="#1052">
+        </div>
+        <div class="lct-q">
+          <label class="lct-l" for="lct-msg-{{ sid }}">Message</label>
+          <textarea id="lct-msg-{{ sid }}" name="message" required></textarea>
+        </div>
+        <div class="lct-trap" aria-hidden="true">
+          <label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+        <button type="submit" class="lct-submit">{{ section.settings.button_label }}</button>
+        <p class="lct-error" role="alert" hidden></p>
+        <p class="lct-small">{{ section.settings.small_print }}</p>
+      </form>
+
+      <div class="lct-done" hidden>
+        <h2>Thank you, it’s on its way to me.</h2>
+        <p>{{ section.settings.reply_time }}. A confirmation is in your inbox now (check spam if you don’t see it).</p>
+        <p>When I reply, you’ll get an email with a link to the conversation.</p>
+        <button type="button" class="lct-again">Send another message</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('lct-{{ sid }}');
+    if (!root) return;
+    var form = root.querySelector('form');
+    var done = root.querySelector('.lct-done');
+    var error = root.querySelector('.lct-error');
+    var button = root.querySelector('.lct-submit');
+    var orderRow = root.querySelector('.lct-order');
+    var opened = Date.now();
+    var endpoint = {{ lct_endpoint | json }};
+
+    // Preselect a topic from the link, e.g. /pages/contact?topic=custom
+    var wanted = (new URLSearchParams(location.search).get('topic') || '').toLowerCase();
+    root.querySelectorAll('input[name=topic]').forEach(function (r) {
+      if (wanted && r.value.toLowerCase().indexOf(wanted) === 0) r.checked = true;
+    });
+    function syncOrder() {
+      var t = form.querySelector('input[name=topic]:checked');
+      orderRow.hidden = !(t && t.value === 'Order question');
+    }
+    form.addEventListener('change', syncOrder);
+    syncOrder();
+
+    function fail(text) {
+      error.textContent = text;
+      error.hidden = false;
+      button.disabled = false;
+      button.textContent = {{ section.settings.button_label | json }};
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      error.hidden = true;
+      var data = new FormData(form);
+      var email = String(data.get('email') || '').trim();
+      var message = String(data.get('message') || '').trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('Please check your email address.');
+      if (message.length < 2) return fail('Please write a message.');
+      button.disabled = true;
+      button.textContent = 'Sending…';
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          name: data.get('name'),
+          email: email,
+          topic: data.get('topic'),
+          order: orderRow.hidden ? '' : data.get('order'),
+          message: message,
+          website: data.get('website'),
+          t: Date.now() - opened
+        })
+      })
+        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (r) {
+          if (!r.ok || r.body.error) return fail(r.body.error || 'Something went wrong. Please try again.');
+          form.hidden = true;
+          done.hidden = false;
+          done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        })
+        .catch(function () { fail('Couldn’t send just now. Please try again, or email {{ section.settings.fallback_email }}.'); });
+    });
+
+    root.querySelector('.lct-again').addEventListener('click', function () {
+      form.querySelector('textarea').value = '';
+      opened = Date.now();
+      button.disabled = false;
+      button.textContent = {{ section.settings.button_label | json }};
+      done.hidden = true;
+      form.hidden = false;
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Luna Contact",
+  "settings": [
+    { "type": "text", "id": "supabase_url", "label": "Supabase project URL", "info": "Supabase > Project Settings > API > Project URL, e.g. https://abcd1234.supabase.co" },
+    { "type": "text", "id": "eyebrow", "label": "Small heading", "default": "Contact" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Send me a message." },
+    { "type": "textarea", "id": "lead", "label": "Intro", "default": "Questions about an order, a custom idea, or a collab: it all comes straight to me." },
+    { "type": "text", "id": "reply_time", "label": "Reply time", "default": "I usually reply within a day" },
+    { "type": "text", "id": "portal_url", "label": "Order page link", "default": "https://orders.lilacdesk.com" },
+    { "type": "text", "id": "quote_url", "label": "Custom request link", "default": "/pages/custom-quote" },
+    { "type": "text", "id": "button_label", "label": "Button", "default": "Send message" },
+    { "type": "text", "id": "small_print", "label": "Small print", "default": "Your message goes only to me. No mailing list." },
+    { "type": "text", "id": "fallback_email", "label": "Backup email (shown only if sending fails)", "default": "support@lilacdesk.com" }
+  ],
+  "presets": [{ "name": "Luna Contact" }]
+}
+{% endschema %}

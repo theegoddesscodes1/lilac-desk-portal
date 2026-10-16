@@ -1212,3 +1212,8 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .qcard-pay { flex-direction: column; align-items: stretch; gap: 10px; }
   .qcard-pay .btn { width: 100%; text-align: center; }
 }
+
+/* ---------- v13: contact conversations ---------- */
+.contact-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.noorder-contacts { margin-top: 40px; max-width: 460px; }
+.mini-row .dot { display: inline-block; vertical-align: middle; margin-right: 4px; }

@@ -56,7 +56,8 @@ function Line({ o, total, note, showDue }) {
 }
 
 export default function AdminHome() {
-  const { loading, orders, messagesByOrder, addonsByOrder, totalFor, quoteThreads = [] } = useAdmin();
+  const { loading, orders, messagesByOrder, addonsByOrder, totalFor, quoteThreads = [], contactThreads = [] } = useAdmin();
+  const waitingContacts = contactThreads.filter((t) => !t.contact.quote_id && t.needsReply);
   const openRequests = quoteThreads.filter((t) => t.quote.status === 'open' || t.quote.status === 'quoted');
   if (loading) return <p className="muted page-pad">Loading</p>;
 
@@ -125,6 +126,21 @@ export default function AdminHome() {
                   <span>
                     {t.quote.name || t.quote.email}
                     <small>{t.quote.status === 'quoted' ? `Quoted ${money(t.quote.price)}, waiting for payment` : t.needsReply ? 'Waiting on your reply' : 'In conversation'}</small>
+                  </span>
+                  {t.unread > 0 ? <span className="dot" /> : <Icon name="chevron" size={16} className="muted" />}
+                </Link>
+              ))}
+            </>
+          )}
+
+          {waitingContacts.length > 0 && (
+            <>
+              <p className="label muted section-gap">Contact messages · {waitingContacts.length}</p>
+              {waitingContacts.map((t) => (
+                <Link key={t.contact.id} to={`/messages/c/${t.contact.id}`} className="mini-row">
+                  <span>
+                    {t.contact.name || t.contact.email}
+                    <small>{t.contact.topic} · {t.last?.body?.slice(0, 60)}{t.last?.body?.length > 60 ? '…' : ''}</small>
                   </span>
                   {t.unread > 0 ? <span className="dot" /> : <Icon name="chevron" size={16} className="muted" />}
                 </Link>
