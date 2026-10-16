@@ -33,7 +33,7 @@ export function RoundFiles({ round, title }) {
 }
 
 // Compact list of rounds (earlier proofs, admin files tab)
-export function RoundList({ rounds, newest = null }) {
+export function RoundList({ rounds, newest = null, pinsFor }) {
   const [open, setOpen] = useState(null);
   return (
     <>
@@ -41,7 +41,10 @@ export function RoundList({ rounds, newest = null }) {
         {rounds.map((r) => (
           <div key={r.number} className="rrow">
             <button type="button" className="rrow-main" onClick={() => setOpen(r)}>
-              <span className="rrow-title">Proof {r.number}{newest === r.number && <span className="ntag ntag--ox rrow-new">New</span>}</span>
+              <span className="rrow-title">
+                Proof {r.number}{newest === r.number && <span className="ntag ntag--ox rrow-new">New</span>}
+                {pinsFor && pinsFor(r).length > 0 && <span className="rrow-pins">{pinsFor(r).length} {pinsFor(r).length === 1 ? 'note' : 'notes'}</span>}
+              </span>
               <span className="rrow-meta">
                 {r.files.length} {r.files.length === 1 ? 'file' : 'files'} · {formatDate(r.at)}
                 {r.verdict && <span className={r.verdict.kind === 'approval' ? 'ok' : ''}> · {verdictText(r)}</span>}
@@ -51,7 +54,7 @@ export function RoundList({ rounds, newest = null }) {
           </div>
         ))}
       </div>
-      {open && <ProofViewer files={open.files} title={`Proof ${open.number}`} onClose={() => setOpen(null)} />}
+      {open && <ProofViewer files={open.files} title={`Proof ${open.number}`} pins={pinsFor?.(open) || []} onClose={() => setOpen(null)} />}
     </>
   );
 }

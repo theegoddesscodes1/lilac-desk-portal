@@ -20,7 +20,6 @@ const FILTERS = [
   { key: 'archived', label: 'Archived' },
 ];
 
-const QUICK = ['Got it, working on it now.', 'Your new proof is up.', 'Your final files are ready to download.'];
 const LIVE = ['delivered', 'complete', 'closed'];
 
 // Sent into the order chat so the customer knows where to find a quote you send from here
@@ -29,7 +28,7 @@ const QUOTE_NOTE = 'I’ve sent you a quote for a new custom planner. You’ll f
 // One customer, all their orders: chips switch between each order's messages
 function Conversation({ orderId }) {
   const { loading, error, order, files, messages } = useOrderData(orderId);
-  const { conversationFor, isOnline } = useAdmin();
+  const { conversationFor, isOnline, settings } = useAdmin();
   const [quoting, setQuoting] = useState(false);
   const [sentQuote, setSentQuote] = useState(null);
   if (loading) return <p className="muted page-pad">Loading</p>;
@@ -120,7 +119,7 @@ function Conversation({ orderId }) {
           ))}
         </div>
       )}
-      <ChatPanel key={order.id} orderId={order.id} messages={messages} files={files} viewer="admin" customerName={name} quickReplies={QUICK} />
+      <ChatPanel key={order.id} orderId={order.id} messages={messages} files={files} viewer="admin" customerName={name} quickReplies={settings.quickReplies} />
     </div>
   );
 }

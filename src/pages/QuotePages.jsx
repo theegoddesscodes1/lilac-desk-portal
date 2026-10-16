@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { DESIGNER_NAME } from '../portal-config';
 import { errorText, formatDate, keepFresh, onConnected, refreshAll } from '../lib/orderApi';
-import { money } from '../lib/portalData';
+import { money, useAdmin } from '../lib/portalData';
 import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
 import { SeenLine } from '../components/ChatPanel';
@@ -225,6 +225,13 @@ export function SendQuote({ quote = {}, onDone, createQuote, defaultLicense = 'p
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const templates = useAdmin()?.settings?.quoteTemplates ?? [];
+  const applyTemplate = (t) => {
+    setLicense(t.license === 'commercial' ? 'commercial' : 'personal');
+    if (t.price) setPrice(String(t.price));
+    setScope(t.scope || '');
+    setError('');
+  };
   const missing = [
     !(Number(price) > 0) && 'a price',
     !scope.trim() && 'what’s included',
@@ -269,6 +276,16 @@ export function SendQuote({ quote = {}, onDone, createQuote, defaultLicense = 'p
 
   return (
     <form className="send-quote" onSubmit={send}>
+      {templates.length > 0 && (
+        <div className="tpl-pick">
+          <p className="tool-label">Start from a template</p>
+          <div className="pills">
+            {templates.map((t, i) => (
+              <button key={i} type="button" className="pill-opt pill-opt--sm" onClick={() => applyTemplate(t)}>{t.name || 'Untitled'}</button>
+            ))}
+          </div>
+        </div>
+      )}
       <p className="tool-label">License</p>
       <div className="pills">
         {['personal', 'commercial'].map((l) => (

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { LEGACY_LABELS, plannerLabel, visibleSections } from '../portal-config';
+import { BRIEF_SECTIONS, LEGACY_LABELS, plannerLabel, visibleSections } from '../portal-config';
 import { errorText, notify, uploadOrderFile } from '../lib/orderApi';
 import { FileChip, ImageGrid, isImage } from './FilePreview';
 import Icon from './Icons';
@@ -223,7 +223,10 @@ function Field({ field, value, set, toggle, busy, onFiles, onRemoveFile }) {
 
 // ---------- the form ----------
 
-export default function BriefForm({ order, orderAddons = [], readOnly = false, onSubmitted, onSaved }) {
+// Fields not carried over from a past brief: their uploads belong to the old order, and the start month is for a new year
+const NOT_COPIED = new Set(BRIEF_SECTIONS.flatMap((s) => s.fields).filter((f) => ['images', 'files', 'month'].includes(f.type)).map((f) => f.name));
+
+export default function BriefForm({ order, orderAddons = [], readOnly = false, onSubmitted, onSaved, previous = null }) {
   const [values, setValues] = useState(order.brief || {});
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -322,6 +325,12 @@ export default function BriefForm({ order, orderAddons = [], readOnly = false, o
     }
   }
 
+  const empty = Object.keys(values).length === 0;
+  const copyPrevious = () => {
+    const copied = Object.fromEntries(Object.entries(previous.brief || {}).filter(([k]) => !NOT_COPIED.has(k)));
+    update(() => copied);
+  };
+
   const jump = (key) => document.getElementById(`sec-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
@@ -350,6 +359,15 @@ export default function BriefForm({ order, orderAddons = [], readOnly = false, o
           </div>
         )}
         <p className="bf-intro">Just the essentials. Anything you'd rather explain yourself goes in the last section. Your delivery countdown starts when you submit.</p>
+        {previous && empty && (
+          <div className="bf-reuse">
+            <div>
+              <p className="bf-reuse-title">Start from your last brief?</p>
+              <p className="small muted">Fills this in with your answers from {previous.shopify_order_name} ({plannerLabel(previous)}), so you only change what’s different. The start month, uploads and inspiration images aren’t copied.</p>
+            </div>
+            <button type="button" className="btn btn--sm" onClick={copyPrevious}>Use my last brief</button>
+          </div>
+        )}
 
         {sections.map((section, i) => {
           const main = section.fields.filter((f) => !f.extra);

@@ -2,6 +2,7 @@ import { createContext, createElement, useCallback, useContext, useEffect, useMe
 import { supabase } from '../supabaseClient';
 import { ACTIVE_STAGES, DONE_STAGES } from '../portal-config';
 import { keepFresh, onConnected } from './orderApi';
+import { mergeSettings } from './studioSettings';
 
 // ---------- money and dates ----------
 
@@ -84,10 +85,10 @@ export function threadFor(order, messages = []) {
 const AdminContext = createContext(null);
 
 export function AdminDataProvider({ children }) {
-  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [], orderTags: [], archive: [] });
+  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [], orderTags: [], archive: [], studio: null });
 
   const reload = useCallback(async () => {
-    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages, orderTags, archive] = await Promise.all([
+    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages, orderTags, archive, studio] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('order_addons').select('*').order('created_at', { ascending: true }),
       supabase.from('messages').select('id, order_id, sender, kind, body, file_id, read_at, created_at').order('created_at', { ascending: true }),
@@ -99,11 +100,13 @@ export function AdminDataProvider({ children }) {
       supabase.from('contact_messages').select('id, contact_id, sender, body, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('order_tags').select('*'),
       supabase.from('inbox_archive').select('*'),
+      supabase.from('studio_settings').select('data').eq('id', 1).maybeSingle(),
     ]);
     setState({
       loading: false,
       orderTags: orderTags.data ?? [],
       archive: archive.data ?? [],
+      studio: studio.data?.data ?? null,
       contacts: contacts.data ?? [],
       contactMessages: contactMessages.data ?? [],
       quotes: quotes.data ?? [],
@@ -146,6 +149,7 @@ export function AdminDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_tags' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_archive' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'studio_settings' }, soon)
       .subscribe(onConnected(soon));
     const stop = keepFresh(reload);
     return () => {
@@ -263,9 +267,18 @@ export function AdminDataProvider({ children }) {
       setState((st) => ({ ...st, archive: [...st.archive.filter((a) => a.thread_key !== key), { thread_key: key, state: archived ? 'archived' : 'open', set_at: new Date().toISOString() }] }));
       await supabase.from('inbox_archive').upsert({ thread_key: key, state: archived ? 'archived' : 'open', set_at: new Date().toISOString() });
     };
+    const settings = mergeSettings(state.studio);
+    const saveSettings = async (patch) => {
+      const next = { ...(state.studio || {}), ...patch };
+      setState((st) => ({ ...st, studio: next }));
+      const { error } = await supabase.from('studio_settings').upsert({ id: 1, data: next, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    };
     return {
       ...state,
       reload,
+      settings,
+      saveSettings,
       tagsByOrder,
       customerThreads,
       conversationFor,

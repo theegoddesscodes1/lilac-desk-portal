@@ -5,6 +5,7 @@ import Icon from '../components/Icons';
 import { currentSubscription, disablePush, enablePush, needsHomeScreen, pushSupported } from '../lib/push';
 import { errorText } from '../lib/orderApi';
 import { signOut } from '../lib/appVersion';
+import StudioSettings from './admin/StudioSettings';
 
 function DeviceNotifications({ email, isAdmin }) {
   const [on, setOn] = useState(false);
@@ -188,6 +189,8 @@ export default function SettingsPage({ email, isAdmin }) {
         </>
       )}
       {error && <p className="error">{error}</p>}
+
+      {isAdmin && <StudioSettings />}
 
       <div className="settings-foot">
         <button type="button" className="btn btn--ghost btn--sm" onClick={signOut}>Sign out</button>

@@ -6,6 +6,8 @@ import OrderChecklist from '../../components/OrderChecklist';
 import { errorText, formatDate, formatSize, notify, openFile, proofRounds, refreshAll, useOrderData } from '../../lib/orderApi';
 import { FileChip, ImageGrid, isImage } from '../../components/FilePreview';
 import { RoundList } from '../../components/ProofRounds';
+import ProofViewer from '../../components/ProofViewer';
+import { pinLines, usePins } from '../../lib/proofPins';
 import { isActive, isDone, shortDate, useCustomer } from '../../lib/portalData';
 import { signOut } from '../../lib/appVersion';
 import { DeliveryLine, ProgressDots, ProgressHead } from '../../components/Bits';
@@ -13,6 +15,7 @@ import BriefForm from '../../components/BriefForm';
 import ChatPanel from '../../components/ChatPanel';
 import AddExtras from '../../components/AddExtras';
 import Icon from '../../components/Icons';
+import AutoGrow from '../../components/AutoGrow';
 import { DeclinePanel, QuoteCard } from '../QuotePages';
 import { ContactRows } from '../ContactPages';
 
@@ -243,6 +246,14 @@ export function CustomerHome() {
               ))}
             </div>
           )}
+          {(isDone(order) || past.length > 0) && !otherActive.length && (
+            <a href={`${SHOP_URL}/pages/custom-planners`} className="again">
+              <span className="label ox">Order again</span>
+              <b>Ready for next year’s planner?</b>
+              <span>Choose a tier, and your last brief is waiting to be reused, so you only change what’s different.</span>
+              <span className="again-go">See planner tiers <Icon name="chevron" size={14} /></span>
+            </a>
+          )}
           {past.length > 0 && (
             <div className="home-list">
               <p className="label muted">Past orders</p>
@@ -264,8 +275,13 @@ export function CustomerHome() {
 
 export function CustomerBrief() {
   const { loading, error, order, orderAddons, reload } = useOrder();
+  const { orders } = useCustomer();
   const navigate = useNavigate();
   if (loading || error) return <Loading error={error} />;
+  // Their most recent submitted brief on another order, to start from
+  const previous = orders
+    .filter((o) => o.id !== order.id && o.brief_submitted_at && Object.keys(o.brief || {}).length)
+    .sort((a, b) => new Date(b.brief_submitted_at) - new Date(a.brief_submitted_at))[0] || null;
   if (order.brief_submitted_at) {
     return (
       <main className="page page--narrow">
@@ -280,7 +296,7 @@ export function CustomerBrief() {
   return (
     <main className="page page--brief">
       <Link to={`/orders/${order.id}`} className="back-link"><Icon name="back" size={16} /> Home</Link>
-      <BriefForm order={order} orderAddons={orderAddons} onSubmitted={reload} onSaved={() => { reload(); navigate(`/orders/${order.id}`); }} />
+      <BriefForm order={order} orderAddons={orderAddons} previous={previous} onSubmitted={reload} onSaved={() => { reload(); navigate(`/orders/${order.id}`); }} />
     </main>
   );
 }
@@ -288,14 +304,19 @@ export function CustomerBrief() {
 // ---------- Proofs ----------
 
 export function CustomerProofs() {
+  const { id } = useParams();
   const { loading, error, order, files, messages, reload } = useOrder();
+  const { pins, add: addPin, remove: removePin, markSent } = usePins(id);
   const [notes, setNotes] = useState('');
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [viewing, setViewing] = useState(false);
   if (loading || error) return <Loading error={error} />;
 
   const rounds = proofRounds(files, messages);
+  const pinsFor = (r) => pins.filter((p) => p.round === r.number && r.files.some((f) => f.id === p.file_id));
+  const draftPins = rounds[0] ? pinsFor(rounds[0]).filter((p) => !p.sent_at) : [];
   const [latest, ...earlier] = rounds;
   const waiting = order.stage === 'proof_ready';
   const approved = latest && (latest.verdict?.kind === 'approval' || (!waiting && ['approved', 'delivered', 'complete'].includes(order.stage)));
@@ -303,7 +324,9 @@ export function CustomerProofs() {
   const roundsLeft = order.revisions_included - order.revisions_used;
 
   async function approve() {
-    if (!window.confirm(`Approve proof ${latest.number}? Your final files will be prepared from it. Check dates and spelling first.`)) return;
+    const extra = draftPins.length ? `\n\nYou have ${draftPins.length} unsent ${draftPins.length === 1 ? 'note' : 'notes'} on this proof. Approving will discard ${draftPins.length === 1 ? 'it' : 'them'}.` : '';
+    if (!window.confirm(`Approve proof ${latest.number}? Your final files will be prepared from it. Check dates and spelling first.${extra}`)) return;
+    for (const p of draftPins) await removePin(p.id);
     setBusy(true);
     setErr('');
     const { error: rpcError } = await supabase.rpc('approve_proof', { p_order: order.id });
@@ -320,10 +343,13 @@ export function CustomerProofs() {
     event.preventDefault();
     setBusy(true);
     setErr('');
-    const { error: rpcError } = await supabase.rpc('request_revision', { p_order: order.id, p_notes: notes });
+    // Pinned notes go first ("1. page 4: make this smaller"), then anything they typed
+    const composed = [draftPins.length ? `Notes on the proof:\n${pinLines(draftPins, latest.files).join('\n')}` : '', notes.trim()].filter(Boolean).join('\n\n');
+    const { error: rpcError } = await supabase.rpc('request_revision', { p_order: order.id, p_notes: composed });
     setBusy(false);
     if (rpcError) setErr(errorText(rpcError));
     else {
+      await markSent(latest.number);
       setNotes('');
       setAsking(false);
       notify(order.id, 'revision_request');
@@ -350,12 +376,17 @@ export function CustomerProofs() {
             <div className="proof-ask">
               <p className="label ox">Waiting for you</p>
               <p className="proof-ask-title">Proof {latest.number} is ready to review.</p>
-              <p className="muted small">Open it, check dates and spelling, then approve it or send one list of changes.</p>
+              <p className="muted small">Open it, check dates and spelling, then approve it or send one list of changes. Tap right on the proof to pin a note where you want something changed.</p>
+              <button type="button" className="proof-open" onClick={() => setViewing(true)}>
+                <Icon name="proof" size={18} />
+                <span><b>Open proof {latest.number}</b><small>{draftPins.length ? `${draftPins.length} ${draftPins.length === 1 ? 'note' : 'notes'} pinned so far` : `${latest.files.length} ${latest.files.length === 1 ? 'file' : 'files'} · tap to view and add notes`}</small></span>
+                <Icon name="chevron" size={16} />
+              </button>
               {!asking ? (
                 <>
                   <div className="btn-pair">
                     <button type="button" className="btn btn--ox" onClick={approve} disabled={busy}>Approve</button>
-                    <button type="button" className="btn btn--ghost" onClick={() => setAsking(true)} disabled={busy || roundsLeft <= 0}>Request changes</button>
+                    <button type="button" className="btn btn--ghost" onClick={() => setAsking(true)} disabled={busy || roundsLeft <= 0}>{draftPins.length ? `Send ${draftPins.length} ${draftPins.length === 1 ? 'note' : 'notes'}` : 'Request changes'}</button>
                   </div>
                   <p className="muted small proof-ask-note">
                     {roundsLeft > 0
@@ -365,11 +396,25 @@ export function CustomerProofs() {
                 </>
               ) : (
                 <form onSubmit={requestChanges} className="ask">
-                  <label className="field-label" htmlFor="revision-notes">Everything you’d like changed</label>
+                  {draftPins.length > 0 && (
+                    <div className="pin-list">
+                      <p className="field-label">Your notes on the proof</p>
+                      <ol>
+                        {draftPins.map((p) => (
+                          <li key={p.id}>
+                            <span><b>Page {p.page}</b> {p.body}</span>
+                            <button type="button" className="ibtn" onClick={() => removePin(p.id)} aria-label="Remove note"><Icon name="close" size={13} /></button>
+                          </li>
+                        ))}
+                      </ol>
+                      <button type="button" className="link-btn small" onClick={() => setViewing(true)}>Add more on the proof</button>
+                    </div>
+                  )}
+                  <label className="field-label" htmlFor="revision-notes">{draftPins.length ? 'Anything else' : 'Everything you’d like changed'}</label>
                   <p className="field-help">Send it all in one list. Mistakes on my end don’t use a round; message me about those.</p>
-                  <textarea id="revision-notes" rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                  <AutoGrow id="revision-notes" className="ask-notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxHeight={300} placeholder={draftPins.length ? 'Optional' : ''} />
                   <div className="btn-pair">
-                    <button type="submit" className="btn btn--ox" disabled={busy || !notes.trim()}>Send changes</button>
+                    <button type="submit" className="btn btn--ox" disabled={busy || (!notes.trim() && !draftPins.length)}>Send changes</button>
                     <button type="button" className="btn btn--ghost" onClick={() => setAsking(false)}>Cancel</button>
                   </div>
                 </form>
@@ -384,7 +429,21 @@ export function CustomerProofs() {
           {changes && <p className="proof-note">You asked for changes on {formatDate(latest.verdict.at)}. Your next proof will show up here.</p>}
 
           <p className="label muted section-gap-sm">All proofs</p>
-          <RoundList rounds={rounds} newest={waiting ? latest.number : null} />
+          <RoundList rounds={rounds} newest={waiting ? latest.number : null} pinsFor={(r) => pinsFor(r).filter((p) => p.sent_at)} />
+          {viewing && (
+            <ProofViewer
+              files={latest.files}
+              title={`Proof ${latest.number}`}
+              pins={pinsFor(latest)}
+              pinning={waiting && roundsLeft > 0}
+              onAddPin={(pin) => addPin({ ...pin, round: latest.number })}
+              onRemovePin={removePin}
+              onClose={() => {
+                setViewing(false);
+                if (draftPins.length) setAsking(true);
+              }}
+            />
+          )}
         </>
       )}
     </main>

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FIX_WINDOW_DAYS, NO_RESPONSE_DAYS, WAITING_ON_CUSTOMER, plannerLabel } from '../../portal-config';
 import { daysSince, formatDate, proofRounds, refreshAll, useOrderData } from '../../lib/orderApi';
 import { RoundList, verdictText } from '../../components/ProofRounds';
 import ProofViewer from '../../components/ProofViewer';
+import { usePins } from '../../lib/proofPins';
 import OrderChecklist from '../../components/OrderChecklist';
 import { supabase } from '../../supabaseClient';
 import { ago, approvedProofNumber, money, orderTotal, shortDate, useAdmin } from '../../lib/portalData';
@@ -66,8 +67,12 @@ function buildSteps(order, rounds) {
 }
 
 // Latest things that happened on this order, newest first
-function buildActivity(order, rounds, messages, orderAddons, first) {
+const REMINDER_TEXT = (k) =>
+  k === 'brief_nudge' ? 'Reminder sent: brief' : k.startsWith('proof_nudge') ? `Reminder sent: proof ${k.split('_').pop()}` : k.startsWith('last_call') ? 'Last reminder sent' : k === 'review' ? 'Review request sent' : 'Reminder sent';
+
+function buildActivity(order, rounds, messages, orderAddons, first, reminders = []) {
   const items = [];
+  for (const r of reminders) items.push({ id: `rem-${r.kind}`, at: r.sent_at, text: REMINDER_TEXT(r.kind), sub: 'Sent automatically' });
   // Order events only; conversations live in the Messages tab
   for (const m of messages) {
     if (m.kind === 'approval') items.push({ id: m.id, at: m.created_at, text: `${first} approved ${approvedProofNumber(messages, m) ? `proof ${approvedProofNumber(messages, m)}` : 'the proof'}`, to: 'chat', strong: true });
@@ -88,11 +93,18 @@ export default function AdminOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { loading, error, order, files, messages, orderAddons } = useOrderData(id);
-  const { orders, totalFor, tagsByOrder = {} } = useAdmin();
+  const { orders, totalFor, tagsByOrder = {}, settings } = useAdmin();
   const [tab, setTab] = useState('overview');
   const [panel, setPanel] = useState('');
   const [viewing, setViewing] = useState(null);
   const [allActivity, setAllActivity] = useState(false);
+  const [reminders, setReminders] = useState([]);
+  const { pins } = usePins(id);
+  // You see notes once they're sent with a change request (drafts stay private to the customer)
+  const pinsFor = (r) => pins.filter((p) => p.sent_at && p.round === r.number && r.files.some((f) => f.id === p.file_id));
+  useEffect(() => {
+    supabase.from('reminder_log').select('kind, sent_at').eq('order_id', id).then(({ data }) => setReminders(data ?? []));
+  }, [id]);
 
   if (loading) return <p className="muted page-pad">Loading order</p>;
   if (error) return <main className="page"><p className="error">{error}</p><Link to="/orders">Back to orders</Link></main>;
@@ -108,7 +120,7 @@ export default function AdminOrder() {
   const flag = WAITING_ON_CUSTOMER.includes(order.stage) && quiet >= NO_RESPONSE_DAYS;
   const byKind = (...k) => files.filter((f) => k.includes(f.kind));
   const steps = buildSteps(order, rounds);
-  const activity = buildActivity(order, rounds, messages, orderAddons, first);
+  const activity = buildActivity(order, rounds, messages, orderAddons, first, reminders);
   const shownActivity = allActivity ? activity : activity.slice(0, 6);
   const profile = `/customers/${encodeURIComponent(order.customer_email)}`;
 
@@ -295,7 +307,7 @@ export default function AdminOrder() {
           {tab === 'files' && (
             <div className="tab-body">
               <h3 className="h-sub">Proofs</h3>
-              {rounds.length ? <RoundList rounds={rounds} /> : <p className="muted">No proofs yet.</p>}
+              {rounds.length ? <RoundList rounds={rounds} pinsFor={pinsFor} /> : <p className="muted">No proofs yet.</p>}
               <h3 className="h-sub">Final files</h3>
               <FileList files={byKind('final', 'source')} empty="No final files yet." />
               <h3 className="h-sub">From the customer</h3>
@@ -331,7 +343,7 @@ export default function AdminOrder() {
                 </button>
                 <span className="order-chat-who"><b>{name}</b><small>{order.shopify_order_name} · {plannerLabel(order)}</small></span>
               </div>
-              <ChatPanel orderId={order.id} messages={messages} files={files} viewer="admin" customerName={name} />
+              <ChatPanel orderId={order.id} messages={messages} files={files} viewer="admin" customerName={name} quickReplies={settings?.quickReplies} />
             </div>
           )}
         </div>
@@ -339,7 +351,7 @@ export default function AdminOrder() {
         <aside className="order-aside hide-phone">{paybox}</aside>
       </div>
 
-      {viewing && <ProofViewer files={viewing.files} title={`Proof ${viewing.number}`} onClose={() => setViewing(null)} />}
+      {viewing && <ProofViewer files={viewing.files} title={`Proof ${viewing.number}`} pins={pinsFor(viewing)} onClose={() => setViewing(null)} />}
     </main>
   );
 }
