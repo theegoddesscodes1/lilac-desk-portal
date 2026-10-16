@@ -1331,3 +1331,12 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 }
 .inbox-head .seg button { padding: 6px 8px; font-size: 11.5px; }
 @media (max-width: 899px) { .inbox-head .seg button { padding: 6px 10px; font-size: 12px; } }
+
+/* ---------- v20: compact order switcher (same track style as the filters) ---------- */
+.ochips { display: flex; gap: 2px; width: max-content; max-width: 100%; margin: 0 0 12px; padding: 3px; background: #EEEBE7; border: 0; border-radius: 19px; overflow-x: auto; scrollbar-width: none; }
+.ochip { position: static; flex: none; display: inline-flex; flex-direction: row; align-items: center; gap: 7px; padding: 6px 13px; border: 0; border-radius: 16px; background: none; box-shadow: none; font-family: var(--sans); font-size: 12.5px; color: #6c6862; line-height: 1.2; white-space: nowrap; }
+.ochip:hover { color: var(--charcoal); border: 0; }
+.ochip--on { background: #fff; color: var(--oxblood); box-shadow: 0 1px 3px rgba(51, 51, 51, 0.14); }
+.ochip .sd { width: 6px; height: 6px; }
+.ochip-dot { position: static; width: 6px; height: 6px; border-radius: 50%; background: var(--oxblood); margin-left: -2px; }
+.convo-head + .ochips { margin-top: 2px; }

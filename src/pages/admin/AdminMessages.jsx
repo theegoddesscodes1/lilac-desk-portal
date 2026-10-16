@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { stageInfo } from '../../portal-config';
+import { STAGE_TONE, stageInfo } from '../../portal-config';
 import { useOrderData } from '../../lib/orderApi';
 import { ago, money, useAdmin } from '../../lib/portalData';
 import { QuoteThread } from '../QuotePages';
@@ -51,9 +51,16 @@ function Conversation({ orderId }) {
       {chips.length > 1 && (
         <div className="ochips" role="tablist" aria-label="Their orders">
           {chips.map(({ order: o, thread }) => (
-            <Link key={o.id} to={`/messages/${o.id}`} role="tab" aria-selected={o.id === order.id} className={`ochip${o.id === order.id ? ' ochip--on' : ''}`}>
-              <b>{o.shopify_order_name}</b>
-              <span>{stageInfo(o.stage).label}{o.due_at && !LIVE.includes(o.stage) ? ` · ${dueText(o).replace('due ', '')}` : ''}</span>
+            <Link
+              key={o.id}
+              to={`/messages/${o.id}`}
+              role="tab"
+              aria-selected={o.id === order.id}
+              className={`ochip${o.id === order.id ? ' ochip--on' : ''}`}
+              title={`${o.shopify_order_name} · ${stageInfo(o.stage).label}`}
+            >
+              <i className={`sd sd--${STAGE_TONE[o.stage] || 'grey'}`} />
+              {o.shopify_order_name}
               {thread.unread > 0 && o.id !== order.id && <i className="ochip-dot" aria-label="Unread" />}
             </Link>
           ))}
