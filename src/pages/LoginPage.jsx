@@ -3,7 +3,8 @@ import { supabase } from '../supabaseClient';
 import { errorText } from '../lib/orderApi';
 import Icon from '../components/Icons';
 
-const CODE_LENGTH = 6;
+// Must match Supabase: Authentication > Providers > Email > "Email OTP Length" (yours is 8)
+const CODE_LENGTH = 8;
 const RESEND_SECONDS = 30;
 
 // Six boxes on top of one real input, so phones can autofill the code from the email
@@ -122,7 +123,7 @@ export default function LoginPage({ notice = '' }) {
                 <Icon name="back" size={16} /> Change email
               </button>
               <h1 className="signin-title">Check your email.</h1>
-              <p className="signin-lead">Enter the 6-digit code sent to <b>{email}</b>, or tap the link in that email.</p>
+              <p className="signin-lead">Enter the {CODE_LENGTH}-digit code sent to <b>{email}</b>, or tap the link in that email.</p>
               <CodeInput value={code} onChange={setCode} onComplete={verify} disabled={busy} />
               <button type="submit" className="btn btn--block signin-go" disabled={busy || code.length < CODE_LENGTH}>
                 {busy ? 'Signing in…' : 'Sign in'}

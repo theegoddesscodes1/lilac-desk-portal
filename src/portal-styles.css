@@ -1071,7 +1071,7 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .signin-help { margin: 40px 0 0; font-size: 12.5px; color: #8a867f; text-align: center; }
 .signin .error { margin-top: 14px; }
 
-.otp { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; cursor: text; }
+.otp { position: relative; display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; cursor: text; }
 .otp-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; font-size: 16px; caret-color: transparent; }
 .otp-box { height: 56px; border: 1px solid var(--greige); border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 24px; }
 .otp-box--on { border-color: var(--charcoal); }
@@ -1137,3 +1137,4 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .toolbar .search { flex: 1 1 0; min-width: 0; }
   .toolbar .fchips { order: 3; flex: 0 0 100%; }
 }
+.otp-box { height: 50px; font-size: 22px; border-radius: 10px; }
