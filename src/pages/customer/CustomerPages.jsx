@@ -13,7 +13,7 @@ import BriefForm from '../../components/BriefForm';
 import ChatPanel from '../../components/ChatPanel';
 import AddExtras from '../../components/AddExtras';
 import Icon from '../../components/Icons';
-import { QuoteCard } from '../QuotePages';
+import { DeclinePanel, QuoteCard } from '../QuotePages';
 
 function useOrder() {
   const { id } = useParams();
@@ -62,6 +62,7 @@ const QUOTE_STEPS = ['Request', 'Quote', 'Pay', 'Brief'];
 
 function QuoteHome({ quote }) {
   const { unreadQuote } = useCustomer();
+  const [declining, setDeclining] = useState(false);
   const chat = `/quotes/${quote.id}`;
   const unread = unreadQuote(quote.id);
   const at = { open: 1, quoted: 2, paid: 3, closed: -1 }[quote.status] ?? 1;
@@ -69,7 +70,9 @@ function QuoteHome({ quote }) {
     open: { title: 'Your request is in.', text: 'I’m reading it over and will reply in your request chat, usually within a day. You’ll get an email when I do.' },
     quoted: { title: 'Your quote is ready.', text: 'Look it over, ask anything you’re unsure about, and pay when you’re ready. Your brief opens right after.' },
     paid: { title: 'Payment received.', text: 'Your order is being set up. It will appear here in a minute or two.' },
-    closed: { title: 'This request is closed.', text: 'This quote didn’t go ahead. If anything changes, you can send a new request anytime, or choose one of the planner tiers.' },
+    closed: quote.closed_by === 'customer'
+      ? { title: 'You declined this quote.', text: 'Thanks for letting me know. If anything changes, send a new request anytime, or choose one of the planner tiers.' }
+      : { title: 'This request is closed.', text: 'This quote didn’t go ahead. If anything changes, you can send a new request anytime, or choose one of the planner tiers.' },
   }[quote.status] || {};
   const idea = quote.request?.idea;
 
@@ -78,7 +81,7 @@ function QuoteHome({ quote }) {
       <div className="home-grid">
         <div>
           <p className="label muted">Custom planner request · {formatDate(quote.created_at)}</p>
-          <p className="label ox home-next">{quote.status === 'closed' ? 'Request closed' : 'Where things are'}</p>
+          <p className="label ox home-next">{quote.status === 'closed' ? (quote.closed_by === 'customer' ? 'Declined' : 'Request closed') : 'Where things are'}</p>
           <h1 className="h-display">{copy.title}</h1>
           <p className="lead">{copy.text}</p>
           <div className="btn-row">
@@ -96,6 +99,16 @@ function QuoteHome({ quote }) {
               <Link to={chat} className={`btn ${unread ? 'btn--ox' : 'btn--ghost'} btn--lg`}>{unread ? `Read ${DESIGNER_NAME}’s reply` : 'Open your request'}</Link>
             )}
           </div>
+
+          {['open', 'quoted'].includes(quote.status) && (declining ? (
+            <div className="panel-box qhome-decline">
+              <DeclinePanel quote={quote} onDone={() => setDeclining(false)} onCancel={() => setDeclining(false)} />
+            </div>
+          ) : (
+            <button type="button" className="link-btn small qhome-no" onClick={() => setDeclining(true)}>
+              {quote.status === 'quoted' ? 'No thanks, decline this quote' : 'Withdraw this request'}
+            </button>
+          ))}
 
           {at > 0 && (
             <ol className="qprog" aria-label="Progress">

@@ -1197,3 +1197,18 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .qcard-pay .btn { width: 100%; }
   .qprog { margin-top: 28px; }
 }
+
+/* ---------- v12: decline a quote ---------- */
+.decline { display: grid; gap: 12px; }
+.decline-title { font-family: var(--serif); font-size: 21px; margin: 0; }
+.decline .small { margin: -6px 0 0; }
+.decline-note { min-height: 70px; border-radius: 12px; }
+.decline-foot { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.quote-withdraw { align-self: center; margin-top: 6px; color: #8a867f; }
+.qhome-no { display: inline-block; margin-top: 14px; color: #8a867f; }
+.qhome-decline { margin-top: 22px; max-width: 520px; }
+.qcard-pay .btn--ghost { padding-left: 22px; padding-right: 22px; }
+@media (max-width: 899px) {
+  .qcard-pay { flex-direction: column; align-items: stretch; gap: 10px; }
+  .qcard-pay .btn { width: 100%; text-align: center; }
+}

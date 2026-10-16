@@ -8,6 +8,7 @@ import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
 
 const STATUS = { open: 'Talking it through', quoted: 'Quote sent', paid: 'Paid', closed: 'Closed' };
+const statusText = (q, admin) => (q.status === 'closed' && q.closed_by === 'customer' ? (admin ? 'Declined' : 'You declined') : STATUS[q.status]);
 const notifyQuote = (quoteId, event) =>
   supabase.functions.invoke('portal-quote', { body: { action: 'notify', quote_id: quoteId, event } }).catch(() => {});
 
@@ -136,7 +137,7 @@ function RequestSummary({ quote }) {
   );
 }
 
-export function QuoteCard({ quote, admin, compact = false }) {
+export function QuoteCard({ quote, admin, compact = false, onDecline }) {
   const lic = quote.license === 'commercial' ? 'Commercial' : 'Personal';
   const payable = quote.status === 'quoted' && !admin && quote.invoice_url;
   return (
@@ -164,12 +165,53 @@ export function QuoteCard({ quote, admin, compact = false }) {
       {payable && (
         <div className="qcard-pay">
           <a href={quote.invoice_url} className="btn btn--ox">Pay {money(quote.price)} and start</a>
-          {!compact && <span className="small muted">Questions first? Message me below.</span>}
+          {onDecline && <button type="button" className="btn btn--ghost" onClick={onDecline}>No thanks</button>}
         </div>
       )}
+      {payable && !compact && <p className="small muted qcard-note">Questions first? Message me below.</p>}
       {quote.status === 'quoted' && admin && <p className="small muted qcard-note">Waiting for payment.</p>}
       {quote.status === 'paid' && <p className="small ox qcard-note"><Icon name="check" size={14} /> Paid {formatDate(quote.paid_at)}</p>}
     </div>
+  );
+}
+
+const DECLINE_REASONS = ['Over my budget', 'Timing doesn’t work', 'Not quite what I wanted', 'Went with something else', 'Just exploring'];
+
+// The customer says no (to a quote) or withdraws (a request still being discussed)
+export function DeclinePanel({ quote, onDone, onCancel }) {
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const isQuote = quote.status === 'quoted';
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    const { data, error: err } = await supabase.functions.invoke('portal-quote', { body: { action: 'close', quote_id: quote.id, reason, note } });
+    setBusy(false);
+    if (err || data?.error) return setError(data?.error || errorText(err));
+    refreshAll();
+    onDone?.();
+  }
+
+  return (
+    <form className="decline" onSubmit={submit}>
+      <p className="decline-title">{isQuote ? 'Decline this quote?' : 'Withdraw your request?'}</p>
+      <p className="small muted">No hard feelings. A quick reason helps me, but it’s optional.</p>
+      <div className="pills">
+        {DECLINE_REASONS.map((r) => (
+          <button key={r} type="button" className={`pill-opt pill-opt--sm${reason === r ? ' pill-opt--on' : ''}`} onClick={() => setReason(reason === r ? '' : r)}>{r}</button>
+        ))}
+      </div>
+      <textarea className="qarea decline-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything else you’d like me to know (optional)" />
+      {error && <p className="error">{error}</p>}
+      <div className="decline-foot">
+        <button type="submit" className="btn btn--sm" disabled={busy}>{busy ? 'Sending…' : isQuote ? 'Decline quote' : 'Withdraw request'}</button>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={onCancel} disabled={busy}>Keep it open</button>
+      </div>
+    </form>
   );
 }
 
@@ -248,6 +290,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [panel, setPanel] = useState(false);
+  const [declining, setDeclining] = useState(false);
   const listRef = useRef(null);
   const unread = messages.some((m) => (admin ? m.sender === 'customer' : m.sender !== 'customer') && !m.read_at);
 
@@ -279,9 +322,10 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
   }
 
   async function close() {
-    if (!window.confirm('Close this request? The customer can still read the chat.')) return;
-    await supabase.from('quotes').update({ status: 'closed', updated_at: new Date().toISOString() }).eq('id', id);
-    await supabase.from('quote_messages').insert({ quote_id: id, sender: 'system', body: 'This request was closed.' });
+    if (!window.confirm('Close this request? The customer can still read the chat, and any unpaid invoice is removed.')) return;
+    const { data, error: err } = await supabase.functions.invoke('portal-quote', { body: { action: 'close', quote_id: id } });
+    if (err || data?.error) window.alert(data?.error || errorText(err));
+    setPanel(false);
     reload();
     refreshAll();
   }
@@ -293,7 +337,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
         {admin ? <Avatar name={name} kind="avatar--dark" /> : <span className="avatar avatar--ox">{DESIGNER_NAME.charAt(0)}</span>}
         <div className="convo-who">
           <p className="chat-name">{admin ? name : DESIGNER_NAME}</p>
-          <p className="muted small">Custom planner request · <span className="ox">{STATUS[quote.status]}</span></p>
+          <p className="muted small">Custom planner request · <span className="ox">{statusText(quote, admin)}</span></p>
         </div>
         {admin && quote.status !== 'paid' && quote.status !== 'closed' && (
           <button type="button" className={`btn btn--sm ${panel ? 'btn--ghost btn--active' : ''}`} onClick={() => setPanel((v) => !v)}>
@@ -317,7 +361,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
                 </div>
               );
             }
-            if (m.kind === 'quote') return <QuoteCard key={m.id} quote={quote} admin={admin} />;
+            if (m.kind === 'quote') return <QuoteCard key={m.id} quote={quote} admin={admin} onDecline={admin ? undefined : () => setDeclining(true)} />;
             const mine = admin ? m.sender === 'admin' : m.sender === 'customer';
             const who = mine ? 'You' : admin ? name : DESIGNER_NAME;
             return (
@@ -330,6 +374,9 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
           {!admin && quote.status === 'open' && messages.length <= 1 && (
             <p className="msg-sys">Thanks! I’ll reply here, usually within a day.</p>
           )}
+          {!admin && quote.status === 'open' && !declining && (
+            <button type="button" className="link-btn small quote-withdraw" onClick={() => setDeclining(true)}>Changed your mind? Withdraw this request</button>
+          )}
         </div>
 
         {admin && panel && (
@@ -339,7 +386,13 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
           </div>
         )}
 
-        {quote.status !== 'closed' && !(admin && panel) && (
+        {!admin && declining && ['open', 'quoted'].includes(quote.status) && (
+          <div className="panel-box quote-panel">
+            <DeclinePanel quote={quote} onDone={() => { setDeclining(false); reload(); }} onCancel={() => setDeclining(false)} />
+          </div>
+        )}
+
+        {quote.status !== 'closed' && !(admin && panel) && !declining && (
           <form className="compose" onSubmit={send}>
             <span />
             <div className="compose-box">

@@ -83,7 +83,7 @@ export default function AdminMessages() {
                   <span className="thread-meta">
                     <span className="ntag ntag--ox">Quote</span>
                     {t.unread > 0 && <span className="dot" />}
-                    <span className="muted small">{q.status === 'open' ? 'New request' : q.status === 'quoted' ? `Quoted ${money(q.price)}` : q.status === 'paid' ? 'Paid' : 'Closed'}</span>
+                    <span className="muted small">{q.status === 'open' ? 'New request' : q.status === 'quoted' ? `Quoted ${money(q.price)}` : q.status === 'paid' ? 'Paid' : q.closed_by === 'customer' ? `Declined${q.close_reason ? ` · ${q.close_reason}` : ''}` : 'Closed'}</span>
                   </span>
                 </span>
               </Link>

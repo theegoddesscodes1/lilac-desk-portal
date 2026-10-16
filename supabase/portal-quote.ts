@@ -5,6 +5,8 @@
 //   { action: "notify", quote_id, event: "request" | "message" }   tells the other side (phone + email)
 //   { action: "send", quote_id, license, price, scope, manual_url? } Kerry sends a quote: creates the
 //      Shopify invoice (draft order) and posts a "Pay and start" card in the chat
+//   { action: "close", quote_id, reason?, note? }   the customer declines, or Kerry closes the request:
+//      marks it closed, deletes the unpaid Shopify invoice so it can't be paid, tells the other side
 //
 // Secrets: SHOPIFY_STORE (the part before .myshopify.com, e.g. the-lilac-desk), and either
 // SHOPIFY_ADMIN_TOKEN, or SHOPIFY_CLIENT_ID + SHOPIFY_CLIENT_SECRET from a Dev Dashboard app
@@ -135,6 +137,16 @@ async function createInvoice(quote: any, license: string, price: number, scope: 
   return { id: result.draftOrder.id as string, url: result.draftOrder.invoiceUrl as string };
 }
 
+async function deleteInvoice(draftId: string | null) {
+  if (!draftId) return;
+  try {
+    const data = await shopifyGraphql(`mutation Drop($input: DraftOrderDeleteInput!) { draftOrderDelete(input: $input) { deletedId userErrors { message } } }`, { input: { id: draftId } });
+    console.log("portal-quote: invoice deleted", JSON.stringify(data.data?.draftOrderDelete ?? data.errors));
+  } catch (err) {
+    console.error("portal-quote: invoice delete failed", String(err));
+  }
+}
+
 // ---------- main ----------
 
 Deno.serve(async (req) => {
@@ -209,6 +221,38 @@ Deno.serve(async (req) => {
       ),
     );
     return reply({ ok: true, invoice_url: invoice.url });
+  }
+
+  if (body.action === "close") {
+    if (!["open", "quoted"].includes(quote.status)) return reply({ error: "This request is already finished" }, 400);
+    const by = isAdmin ? "admin" : "customer";
+    const reason = String(body.reason || "").trim().slice(0, 80);
+    const note = String(body.note || "").trim().slice(0, 1000);
+    const now = new Date().toISOString();
+
+    await service.from("quotes").update({ status: "closed", closed_by: by, close_reason: reason || null, closed_at: now, updated_at: now }).eq("id", quote.id);
+    if (note) await service.from("quote_messages").insert({ quote_id: quote.id, sender: by, kind: "message", body: note, created_at: now });
+    const first = (quote.name || "").split(" ")[0] || "The customer";
+    const line = by === "customer"
+      ? `${first} declined ${quote.status === "quoted" ? "the quote" : "this request"}${reason ? `: ${reason.toLowerCase()}` : ""}.`
+      : "This request was closed.";
+    await service.from("quote_messages").insert({ quote_id: quote.id, sender: "system", kind: "message", body: line, created_at: new Date(Date.now() + 1000).toISOString() });
+    await deleteInvoice(quote.draft_order_id);
+
+    if (by === "customer") {
+      await push("admin", null, `${name} declined`, reason || "Their custom planner request is closed.", `/quotes/${quote.id}`);
+      await sendEmail(
+        [env("ADMIN_EMAIL")],
+        `${name} declined their custom planner ${quote.status === "quoted" ? "quote" : "request"}`,
+        emailLayout(
+          "A quote was declined",
+          `<p>${escapeHtml(name)} declined${quote.status === "quoted" && quote.price ? ` the $${Number(quote.price).toFixed(2)} quote` : " their request"}.</p>${reason ? `<p><b>Reason:</b> ${escapeHtml(reason)}</p>` : ""}${note ? `<p style="white-space:pre-wrap;">“${escapeHtml(note)}”</p>` : ""}<p>The unpaid invoice was removed from Shopify.</p>`,
+          "Open in the portal",
+          link,
+        ),
+      );
+    }
+    return reply({ ok: true });
   }
 
   return reply({ error: "Unknown action" }, 400);
