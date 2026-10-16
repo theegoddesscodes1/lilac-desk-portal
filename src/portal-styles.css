@@ -1143,7 +1143,8 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .msg { border-radius: 18px; padding: 10px 15px; }
 .msg--theirs { border-bottom-left-radius: 6px; }
 .msg--mine { border-bottom-right-radius: 6px; }
-.msg--req { border-left: 1px solid var(--oxblood); border-color: var(--oxblood); box-shadow: inset 3px 0 0 var(--oxblood); }
+.msg--req { border: 1px solid var(--oxblood); box-shadow: none; }
+.msg--theirs.msg--req { background: #FBF8F8; }
 .msg-file, .msg .file-chip { border-radius: 999px; }
 .msg-card { border-radius: 14px; }
 

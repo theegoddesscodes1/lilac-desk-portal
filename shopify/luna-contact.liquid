@@ -3,7 +3,8 @@
   instead of Shopify's contact email. Needs the portal-contact Supabase function with "Verify JWT" turned off.
 {%- endcomment -%}
 {%- assign sid = section.id -%}
-{%- assign lct_endpoint = section.settings.supabase_url | strip | remove: '/functions/v1/portal-contact' | append: '/functions/v1/portal-contact' -%}
+{%- assign lct_base = section.settings.supabase_url | default: 'https://fdxbqdhzzyyggdtbjwnz.supabase.co' -%}
+{%- assign lct_endpoint = lct_base | strip | remove: '/functions/v1/portal-contact' | append: '/functions/v1/portal-contact' -%}
 {%- assign lct_name = '' -%}
 {%- assign lct_email = '' -%}
 {%- if customer -%}
@@ -212,7 +213,7 @@
 {
   "name": "Luna Contact",
   "settings": [
-    { "type": "text", "id": "supabase_url", "label": "Supabase project URL", "info": "Supabase > Project Settings > API > Project URL, e.g. https://abcd1234.supabase.co" },
+    { "type": "text", "id": "supabase_url", "label": "Supabase project URL", "default": "https://fdxbqdhzzyyggdtbjwnz.supabase.co", "info": "Supabase > Project Settings > API > Project URL" },
     { "type": "text", "id": "eyebrow", "label": "Small heading", "default": "Contact" },
     { "type": "text", "id": "heading", "label": "Heading", "default": "Send me a message." },
     { "type": "textarea", "id": "lead", "label": "Intro", "default": "Questions about an order, a custom idea, or a collab: it all comes straight to me." },
