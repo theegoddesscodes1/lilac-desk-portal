@@ -275,7 +275,7 @@ function SendQuote({ quote, onDone }) {
       {error && <p className="error">{error}</p>}
       <div className="send-quote-foot">
         <button type="submit" className="btn btn--ox btn--sm" disabled={busy || missing.length > 0}>
-          {busy ? 'Creating invoice…' : `Send quote${Number(price) > 0 ? ` · ${money(Number(price))}` : ''}`}
+          {busy ? 'Creating invoice…' : `${quote.status === 'quoted' ? 'Send updated quote' : 'Send quote'}${Number(price) > 0 ? ` · ${money(Number(price))}` : ''}`}
         </button>
         {missing.length > 0 && !busy && <span className="small muted">Add {missing.join(' and ')}</span>}
       </div>
@@ -305,6 +305,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
   if (error) return <main className="page"><p className="error">{error}</p><Link to="/"><u>Home</u></Link></main>;
 
   const name = quote.name || quote.email;
+  const lastQuoteId = [...messages].reverse().find((m) => m.kind === 'quote')?.id;
   const Wrapper = embedded ? 'div' : 'main';
 
   async function send(e) {
@@ -361,6 +362,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false }) {
                 </div>
               );
             }
+            if (m.kind === 'quote' && m.id !== lastQuoteId) return <p key={m.id} className="msg-sys">Earlier quote, replaced by the updated one below.</p>;
             if (m.kind === 'quote') return <QuoteCard key={m.id} quote={quote} admin={admin} onDecline={admin ? undefined : () => setDeclining(true)} />;
             const mine = admin ? m.sender === 'admin' : m.sender === 'customer';
             const who = mine ? 'You' : admin ? name : DESIGNER_NAME;

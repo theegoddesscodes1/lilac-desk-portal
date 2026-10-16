@@ -203,18 +203,21 @@ Deno.serve(async (req) => {
       return reply({ error: `Shopify couldn't create the invoice: ${String(err)}` }, 502);
     }
 
+    // An updated quote replaces the old invoice, so only the newest price can be paid
+    if (quote.draft_order_id && quote.draft_order_id !== invoice.id) await deleteInvoice(quote.draft_order_id);
+
     await service
       .from("quotes")
       .update({ status: "quoted", license, price, scope, invoice_url: invoice.url, draft_order_id: invoice.id, quoted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", quote.id);
     await service.from("quote_messages").insert({ quote_id: quote.id, sender: "admin", kind: "quote", body: scope });
 
-    await push("customer", quote.email, "Your quote is ready", `$${price.toFixed(2)} · tap to review and pay.`, `/quotes/${quote.id}`);
+    await push("customer", quote.email, quote.status === "quoted" ? "Your quote was updated" : "Your quote is ready", `$${price.toFixed(2)} · tap to review and pay.`, `/quotes/${quote.id}`);
     await sendEmail(
       [quote.email],
-      "Your custom planner quote",
+      quote.status === "quoted" ? "Your updated custom planner quote" : "Your custom planner quote",
       emailLayout(
-        "Your quote is ready",
+        quote.status === "quoted" ? "Your quote was updated" : "Your quote is ready",
         `<p><b>$${price.toFixed(2)}</b> · ${license === "commercial" ? "Commercial" : "Personal"} license</p><p style="white-space:pre-wrap;">${escapeHtml(scope)}</p><p>Review it in your order page. Once you pay, your brief opens right away.</p>`,
         "Review and pay",
         link,
