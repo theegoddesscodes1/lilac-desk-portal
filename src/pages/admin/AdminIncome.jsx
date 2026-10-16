@@ -1,3 +1,4 @@
+import Icon from '../../components/Icons';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isActive, isDone, money, shortDate, useAdmin } from '../../lib/portalData';
@@ -90,12 +91,10 @@ export default function AdminIncome() {
 
   return (
     <main className="page page--wide">
-      <div className="page-head">
-        <h1 className="h-page">Income</h1>
-        <div className="filters filters--tight">
-          <div className="seg">{PERIODS.map((p) => <button key={p.key} type="button" className={period === p.key ? 'on' : ''} onClick={() => setPeriod(p.key)}>{p.label}</button>)}</div>
-          <div className="seg hide-phone"><button type="button" onClick={exportCsv}>Export CSV</button></div>
-        </div>
+      <h1 className="sr-only">Income</h1>
+      <div className="toolbar toolbar--split">
+        <div className="seg">{PERIODS.map((p) => <button key={p.key} type="button" className={period === p.key ? 'on' : ''} onClick={() => setPeriod(p.key)}>{p.label}</button>)}</div>
+        <button type="button" className="icon-link hide-phone" onClick={exportCsv}><Icon name="files" size={16} /> <span>Export CSV</span></button>
       </div>
 
       <div className="kpis">

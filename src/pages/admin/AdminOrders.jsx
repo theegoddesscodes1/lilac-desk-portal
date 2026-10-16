@@ -42,6 +42,11 @@ export default function AdminOrders() {
       if (!g) out.push((g = { key, label: d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }), rows: [] }));
       g.rows.push(o);
     }
+    // Within each month: active orders first, soonest due at the top
+    const rank = (o) => (isActive(o) ? 0 : 1);
+    for (const g of out) {
+      g.rows.sort((a, b) => rank(a) - rank(b) || new Date(a.due_at || 8e15) - new Date(b.due_at || 8e15) || new Date(b.created_at) - new Date(a.created_at));
+    }
     return out;
   }, [orders, status, license, q]);
 
@@ -49,7 +54,7 @@ export default function AdminOrders() {
 
   return (
     <main className="page page--wide">
-      <h1 className="h-page">All orders</h1>
+      <h1 className="sr-only">All orders</h1>
       <div className="toolbar">
         <label className="search">
           <Icon name="search" size={16} />

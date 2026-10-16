@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import { DESIGNER_NAME, FIX_WINDOW_DAYS, REVIEW_URL, plannerLabel } from '../../portal-config';
+import { DESIGNER_NAME, FIX_WINDOW_DAYS, REVIEW_URL, SHOP_URL, plannerLabel } from '../../portal-config';
+import OrderChecklist from '../../components/OrderChecklist';
 import { errorText, formatDate, formatSize, notify, openFile, proofRounds, refreshAll, useOrderData } from '../../lib/orderApi';
 import { FileChip, ImageGrid, isImage } from '../../components/FilePreview';
 import { RoundList } from '../../components/ProofRounds';
@@ -17,15 +18,28 @@ function useOrder() {
   return useOrderData(id);
 }
 
+function NoOrder({ title }) {
+  const { email } = useCustomer();
+  return (
+    <main className="page page--narrow empty-state">
+      <p className="label muted">Your orders</p>
+      <h1 className="h-display">{title}</h1>
+      <p className="lead">You’re signed in as <b>{email}</b>. Orders show up under the email used at checkout, usually within a minute of paying.</p>
+      <ul className="empty-tips">
+        <li>Used a different email at checkout? Sign out and sign in with that one.</li>
+        <li>Just ordered? Give it a minute, then refresh.</li>
+        <li>Still stuck? Email <a href="mailto:support@lilacdesk.com">support@lilacdesk.com</a> with your order number.</li>
+      </ul>
+      <div className="btn-row">
+        <a href={`${SHOP_URL}/pages/custom-planners`} className="btn btn--ox">See custom planners</a>
+        <button type="button" className="btn btn--ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
+      </div>
+    </main>
+  );
+}
+
 function Loading({ error }) {
-  if (error) {
-    return (
-      <main className="page">
-        <p className="error">{error}</p>
-        <Link to="/" className="link-btn">Back to your order</Link>
-      </main>
-    );
-  }
+  if (error) return <NoOrder title="We couldn’t find that order." />;
   return <p className="muted page-pad">Loading your order</p>;
 }
 
@@ -34,15 +48,7 @@ function Loading({ error }) {
 export function CustomerRoot() {
   const { loading, current } = useCustomer();
   if (loading) return <p className="muted page-pad">Loading your order</p>;
-  if (!current) {
-    return (
-      <main className="page page--narrow">
-        <p className="label muted">Your orders</p>
-        <h1 className="h-display">No custom planner orders yet.</h1>
-        <p className="lead">If you just checked out, your order appears here within a minute. Make sure you signed in with the email you used at checkout.</p>
-      </main>
-    );
-  }
+  if (!current) return <NoOrder title="No custom planner orders yet." />;
   return <Navigate to={`/orders/${current.id}`} replace />;
 }
 
@@ -52,6 +58,9 @@ function nextStep(order, proofCount, base) {
   const n = proofCount || 1;
   switch (order.stage) {
     case 'order_placed':
+      if (Object.keys(order.brief || {}).length) {
+        return { title: 'Your brief is started.', text: 'Pick up where you left off. Your delivery countdown starts as soon as you submit it.', action: 'Finish your brief', to: `${base}/brief` };
+      }
       return { title: 'Your brief is ready for you.', text: 'Tell me how you plan and what you love. Your delivery countdown starts as soon as it’s in.', action: 'Fill in your brief', to: `${base}/brief` };
     case 'brief_received':
     case 'designing':
@@ -82,13 +91,13 @@ export function CustomerHome() {
   const others = orders.filter((o) => o.id !== order.id);
   const otherActive = others.filter(isActive);
   const past = others.filter((o) => isDone(o));
-  const extrasLine = orderAddons.length ? ` · with ${orderAddons.map((a) => a.name).join(', ')}` : '';
 
   return (
     <main className="page home">
       <div className="home-grid">
         <div>
-          <p className="label muted">Order {order.shopify_order_name} · {plannerLabel(order)}<span className="hide-phone">{extrasLine}</span></p>
+          <p className="label muted">Order {order.shopify_order_name} · {plannerLabel(order)}</p>
+          {orderAddons.length > 0 && <p className="label muted home-extras">With {orderAddons.map((a) => a.name).join(', ')}</p>}
           <p className="label ox home-next">Your next step</p>
           <h1 className="h-display">{step.title}</h1>
           <p className="lead">{step.text}</p>
@@ -122,6 +131,7 @@ export function CustomerHome() {
               <span className="small"><u>View</u></span>
             </Link>
           )}
+          <OrderChecklist order={order} orderAddons={orderAddons} />
           <AddExtras order={order} addons={addons} orderAddons={orderAddons} />
 
           {otherActive.length > 0 && (
@@ -156,6 +166,7 @@ export function CustomerHome() {
 
 export function CustomerBrief() {
   const { loading, error, order, orderAddons, reload } = useOrder();
+  const navigate = useNavigate();
   if (loading || error) return <Loading error={error} />;
   if (order.brief_submitted_at) {
     return (
@@ -171,7 +182,7 @@ export function CustomerBrief() {
   return (
     <main className="page page--brief">
       <Link to={`/orders/${order.id}`} className="back-link"><Icon name="back" size={16} /> Home</Link>
-      <BriefForm order={order} orderAddons={orderAddons} onSubmitted={reload} />
+      <BriefForm order={order} orderAddons={orderAddons} onSubmitted={reload} onSaved={() => { reload(); navigate(`/orders/${order.id}`); }} />
     </main>
   );
 }
@@ -226,7 +237,7 @@ export function CustomerProofs() {
   return (
     <main className="page page--narrow">
       <div className="page-head">
-        <h1 className="h-page">Proofs</h1>
+        <h1 className="sr-only">Proofs</h1>
         <span className="pill pill--lilac">{order.revisions_used} of {order.revisions_included} rounds used</span>
       </div>
 
@@ -326,7 +337,7 @@ export function CustomerFiles() {
 
   return (
     <main className="page page--narrow">
-      <h1 className="h-page">Your files</h1>
+      <h1 className="sr-only">Your files</h1>
 
       {!released ? (
         <>
@@ -335,11 +346,7 @@ export function CustomerFiles() {
             <p className="serif">Your files unlock when your planner is delivered</p>
             {order.due_at && <p className="muted small">Estimated {shortDate(order.due_at)}</p>}
           </div>
-          <p className="label muted section-gap">What you’ll receive</p>
-          <div className="mini-row"><span>{plannerLabel(order)}<small>Hyperlinked PDF{app ? ` for ${app}` : ''}</small></span><Icon name="lock" size={16} className="muted" /></div>
-          {orderAddons.map((a) => (
-            <div key={a.id} className="mini-row"><span>{a.name}{a.quantity > 1 ? ` (x${a.quantity})` : ''}</span><Icon name="lock" size={16} className="muted" /></div>
-          ))}
+          <div className="section-gap"><OrderChecklist order={order} orderAddons={orderAddons} title="What you’ll receive" /></div>
         </>
       ) : (
         <>

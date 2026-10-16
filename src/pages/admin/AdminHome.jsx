@@ -63,8 +63,9 @@ export default function AdminHome() {
   const active = orders.filter(isActive);
   const needs = active
     .filter((o) => NEEDS_YOU.includes(o.stage))
-    .sort((a, b) => PRIORITY[a.stage] - PRIORITY[b.stage] || new Date(a.due_at || 8e15) - new Date(b.due_at || 8e15));
-  const waiting = active.filter((o) => !NEEDS_YOU.includes(o.stage));
+    // Soonest due first; orders without a due date go last
+    .sort((a, b) => new Date(a.due_at || 8e15) - new Date(b.due_at || 8e15) || PRIORITY[a.stage] - PRIORITY[b.stage]);
+  const waiting = active.filter((o) => !NEEDS_YOU.includes(o.stage)).sort((a, b) => new Date(a.due_at || 8e15) - new Date(b.due_at || 8e15));
   const recent = orders
     .filter((o) => isDone(o) && o.delivered_at && Date.now() - new Date(o.delivered_at) < 30 * 86400000)
     .sort((a, b) => new Date(b.delivered_at) - new Date(a.delivered_at))
@@ -90,15 +91,15 @@ export default function AdminHome() {
         </div>
         <div className="figs">
           <div><span className="label muted">In progress</span><b>{money(inProgress)}</b><small>{active.length} {active.length === 1 ? 'order' : 'orders'}</small></div>
-          <div><span className="label muted">Earned in {monthName}</span><b>{money(earned)}</b><small className={change != null ? 'ox' : ''}>{change != null ? `${change >= 0 ? '+' : ''}${change}% on ${lastMonth.toLocaleDateString(undefined, { month: 'long' })}` : 'Delivered this month'}</small></div>
+          <div><span className="label muted">Earned · {monthName.slice(0, 3)}</span><b>{money(earned)}</b><small className={change != null ? 'ox' : ''}>{change != null ? `${change >= 0 ? '+' : ''}${change}% on ${lastMonth.toLocaleDateString(undefined, { month: 'long' })}` : 'Delivered this month'}</small></div>
         </div>
       </div>
 
       <div className="glance">
-        <span className={needs.length ? 'hot' : ''}><b>{needs.length}</b> need you</span>
-        <span><b>{active.filter((o) => o.stage === 'order_placed').length}</b> <span className="hide-phone">waiting on a brief</span><span className="show-phone">need a brief</span></span>
-        <span><b>{active.filter((o) => o.stage === 'proof_ready').length}</b> proof out</span>
-        <span><b>{dueWeek}</b> due this week</span>
+        <span className={needs.length ? 'hot' : ''}><b>{needs.length}</b> <i>need you</i></span>
+        <span><b>{active.filter((o) => o.stage === 'order_placed').length}</b> <i className="hide-phone">waiting on a brief</i><i className="show-phone">need a brief</i></span>
+        <span><b>{active.filter((o) => o.stage === 'proof_ready').length}</b> <i>proof out</i></span>
+        <span><b>{dueWeek}</b> <i>due this week</i></span>
       </div>
 
       <div className="ahome-grid">

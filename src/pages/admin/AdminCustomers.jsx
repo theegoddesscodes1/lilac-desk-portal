@@ -45,12 +45,12 @@ export function AdminCustomerList() {
 
   return (
     <main className="page page--wide">
-      <div className="page-head">
-        <h1 className="h-page">Customers</h1>
+      <h1 className="sr-only">Customers</h1>
+      <div className="toolbar">
         <label className="search">
           <Icon name="search" size={16} />
           <span className="sr-only">Search</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, or business" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customers" />
         </label>
       </div>
       <p className="muted small">{customers.length} {customers.length === 1 ? 'customer' : 'customers'} · {money(customers.reduce((n, c) => n + c.spent, 0))} all time</p>
@@ -110,6 +110,7 @@ export function AdminCustomer() {
   for (const o of c.orders) {
     activity.push({ at: o.created_at, text: `Ordered ${o.shopify_order_name}, ${shortPlanner(o)}` });
     if (o.brief_submitted_at) activity.push({ at: o.brief_submitted_at, text: `Submitted the brief for ${o.shopify_order_name}` });
+    else if (Object.keys(o.brief || {}).length) activity.push({ at: o.last_customer_activity_at, text: `Started the brief for ${o.shopify_order_name} (draft saved)` });
     for (const a of addonsByOrder[o.id] ?? []) activity.push({ at: a.created_at, text: `Bought ${a.name}` });
     for (const m of messagesByOrder[o.id] ?? []) {
       if (m.sender !== 'customer') continue;

@@ -113,6 +113,10 @@ function Field({ field, value, set, toggle, busy, onFiles, onRemoveFile }) {
   );
   const help = field.help && <p className="ql-help">{field.help}</p>;
 
+  if (field.type === 'note') {
+    return <p className="q-note">{field.label}</p>;
+  }
+
   if (field.type === 'check') {
     return (
       <div className="q">
@@ -219,7 +223,7 @@ function Field({ field, value, set, toggle, busy, onFiles, onRemoveFile }) {
 
 // ---------- the form ----------
 
-export default function BriefForm({ order, orderAddons = [], readOnly = false, onSubmitted }) {
+export default function BriefForm({ order, orderAddons = [], readOnly = false, onSubmitted, onSaved }) {
   const [values, setValues] = useState(order.brief || {});
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -292,7 +296,10 @@ export default function BriefForm({ order, orderAddons = [], readOnly = false, o
     const { error: e } = await supabase.rpc('save_brief', { p_order: order.id, p_brief: values });
     setBusy('');
     if (e) setError(errorText(e));
-    else setSavedAt(Date.now());
+    else {
+      setSavedAt(Date.now());
+      onSaved?.();
+    }
   }
 
   async function submit(event) {

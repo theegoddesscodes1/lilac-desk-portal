@@ -57,7 +57,7 @@ export default function AdminMessages() {
     <main className={`inbox${id ? ' inbox--open' : ''}`}>
       <div className="inbox-list">
         <div className="inbox-head">
-          <h1 className="h-page">Messages</h1>
+          <h1 className="sr-only">Messages</h1>
           <div className="seg">{FILTERS.map((f) => <button key={f.key} type="button" className={filter === f.key ? 'on' : ''} onClick={() => setFilter(f.key)}>{f.label}</button>)}</div>
         </div>
         {shown.length === 0 && <p className="muted inbox-empty">{filter === 'all' ? 'No conversations yet.' : 'Nothing here.'}</p>}

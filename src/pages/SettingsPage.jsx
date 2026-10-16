@@ -133,7 +133,7 @@ export default function SettingsPage({ email, isAdmin }) {
   return (
     <main className="page page--narrow">
       {isAdmin && <Link to="/notifications" className="back-link"><Icon name="back" size={16} /> Notifications</Link>}
-      <h1 className="h-page">Settings</h1>
+      <h1 className="sr-only">Settings</h1>
 
       <p className="label muted section-gap">Signed in as</p>
       <p>{email}</p>

@@ -34,6 +34,7 @@ const PATHS = {
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
+  send: <path d="M5 12h13M13 6l6 6-6 6" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   gear: (

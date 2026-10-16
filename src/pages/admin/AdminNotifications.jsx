@@ -94,7 +94,7 @@ export default function AdminNotifications({ seenAt, onSeen }) {
   return (
     <main className="page page--narrow">
       <div className="page-head page-head--center">
-        <h1 className="h-page">Notifications</h1>
+        <h1 className="sr-only">Notifications</h1>
         <Link to="/settings" className="icon-link" aria-label="Notification settings">
           <Icon name="gear" size={18} />
           <span>Settings</span>

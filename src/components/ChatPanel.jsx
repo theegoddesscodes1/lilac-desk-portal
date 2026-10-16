@@ -121,8 +121,8 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
                 placeholder={viewer === 'admin' ? `Reply to ${customerName?.split(' ')[0] || 'customer'}…` : `Message ${DESIGNER_NAME}…`}
               />
             </div>
-            <button type="submit" className="btn btn--ox" disabled={sending || (!body.trim() && !attachment)}>
-              {sending ? 'Sending' : 'Send'}
+            <button type="submit" className="compose-send" disabled={sending || (!body.trim() && !attachment)} aria-label={sending ? 'Sending' : 'Send'}>
+              <Icon name="send" size={18} />
             </button>
           </form>
           {error && <p className="error">{error}</p>}

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FIX_WINDOW_DAYS, NO_RESPONSE_DAYS, WAITING_ON_CUSTOMER, plannerLabel } from '../../portal-config';
-import { daysSince, formatDate, proofRounds, useOrderData } from '../../lib/orderApi';
+import { daysSince, formatDate, proofRounds, refreshAll, useOrderData } from '../../lib/orderApi';
 import { RoundList, verdictText } from '../../components/ProofRounds';
 import ProofViewer from '../../components/ProofViewer';
+import OrderChecklist from '../../components/OrderChecklist';
+import { supabase } from '../../supabaseClient';
 import { ago, approvedProofNumber, money, orderTotal, shortDate, useAdmin } from '../../lib/portalData';
 import { Avatar, StageDot } from '../../components/Bits';
 import BriefForm from '../../components/BriefForm';
@@ -40,7 +42,9 @@ function buildSteps(order, rounds) {
   steps.push(
     order.brief_submitted_at
       ? { key: 'brief', label: 'Brief received', sub: shortDate(order.brief_submitted_at), state: 'done', link: 'brief' }
-      : { key: 'brief', label: 'Brief', sub: 'Waiting on the customer', state: 'now' }
+      : Object.keys(order.brief || {}).length
+        ? { key: 'brief', label: 'Brief started', sub: `Draft saved ${shortDate(order.last_customer_activity_at)}, not submitted yet`, state: 'now', link: 'brief' }
+        : { key: 'brief', label: 'Brief', sub: 'Waiting on the customer', state: 'now' }
   );
   for (const r of oldestFirst) {
     const verdict = r.verdict ? ` · ${verdictText(r).toLowerCase()} ${shortDate(r.verdict.at)}` : ' · waiting on review';
@@ -231,6 +235,20 @@ export default function AdminOrder() {
                 ))}
               </ol>
 
+              {orderAddons.length > 0 && (
+                <div className="ov-extras">
+                  <OrderChecklist
+                    order={order}
+                    orderAddons={orderAddons}
+                    title="Planner and extras"
+                    onToggle={async (a) => {
+                      await supabase.from('order_addons').update({ done_at: a.done_at ? null : new Date().toISOString() }).eq('id', a.id);
+                      refreshAll();
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="ov-head">
                 <p className="label muted">Latest updates</p>
 
@@ -284,12 +302,26 @@ export default function AdminOrder() {
 
           {tab === 'brief' && (
             <div className="tab-body">
-              {order.brief_submitted_at ? <BriefForm order={order} orderAddons={orderAddons} readOnly /> : <p className="muted">Not submitted yet.</p>}
+              {order.brief_submitted_at ? (
+                <BriefForm order={order} orderAddons={orderAddons} readOnly />
+              ) : Object.keys(order.brief || {}).length ? (
+                <>
+                  <p className="draft-note">Draft, not submitted yet. Last saved {shortDate(order.last_customer_activity_at)}.</p>
+                  <BriefForm order={order} orderAddons={orderAddons} readOnly />
+                </>
+              ) : <p className="muted">Not started yet.</p>}
             </div>
           )}
 
           {tab === 'messages' && (
-            <div className="tab-body tab-body--chat">
+            // On phones this opens as a full-screen chat between the top bar and the bottom nav
+            <div className="order-chat">
+              <div className="order-chat-head">
+                <button type="button" className="order-chat-back" onClick={() => setTab('overview')} aria-label="Back to the order">
+                  <Icon name="back" size={18} />
+                </button>
+                <span className="order-chat-who"><b>{name}</b><small>{order.shopify_order_name} · {plannerLabel(order)}</small></span>
+              </div>
               <ChatPanel orderId={order.id} messages={messages} files={files} viewer="admin" customerName={name} />
             </div>
           )}
