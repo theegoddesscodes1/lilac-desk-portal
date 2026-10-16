@@ -1339,4 +1339,4 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .ochip--on { background: #fff; color: var(--oxblood); box-shadow: 0 1px 3px rgba(51, 51, 51, 0.14); }
 .ochip .sd { width: 6px; height: 6px; }
 .ochip-dot { position: static; width: 6px; height: 6px; border-radius: 50%; background: var(--oxblood); margin-left: -2px; }
-.convo-head + .ochips { margin-top: 2px; }
+.convo-head + .ochips { margin-top: 12px; }
