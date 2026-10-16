@@ -1,6 +1,41 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { errorText } from '../lib/orderApi';
+import Icon from '../components/Icons';
+
+const CODE_LENGTH = 6;
+const RESEND_SECONDS = 30;
+
+// Six boxes on top of one real input, so phones can autofill the code from the email
+function CodeInput({ value, onChange, onComplete, disabled }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+  const digits = value.padEnd(CODE_LENGTH, ' ').slice(0, CODE_LENGTH).split('');
+  return (
+    <div className="otp" onClick={() => ref.current?.focus()}>
+      <input
+        ref={ref}
+        className="otp-input"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        aria-label="Sign-in code"
+        maxLength={CODE_LENGTH}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => {
+          const next = e.target.value.replace(/\D/g, '').slice(0, CODE_LENGTH);
+          onChange(next);
+          if (next.length === CODE_LENGTH) onComplete(next);
+        }}
+      />
+      {digits.map((d, i) => (
+        <span key={i} className={`otp-box${i === value.length ? ' otp-box--now' : ''}${d.trim() ? ' otp-box--on' : ''}`}>{d.trim()}</span>
+      ))}
+    </div>
+  );
+}
 
 export default function LoginPage({ notice = '' }) {
   const [email, setEmail] = useState('');
@@ -8,9 +43,16 @@ export default function LoginPage({ notice = '' }) {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [wait, setWait] = useState(0);
 
-  async function sendLink(event) {
-    event.preventDefault();
+  useEffect(() => {
+    if (!wait) return undefined;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+
+  async function send(event) {
+    event?.preventDefault();
     setBusy(true);
     setError('');
     const { error: otpError } = await supabase.auth.signInWithOtp({
@@ -19,68 +61,86 @@ export default function LoginPage({ notice = '' }) {
     });
     setBusy(false);
     if (otpError) setError(errorText(otpError));
-    else setSent(true);
+    else {
+      setSent(true);
+      setCode('');
+      setWait(RESEND_SECONDS);
+    }
   }
 
-  async function verifyCode(event) {
-    event.preventDefault();
+  async function verify(token) {
     setBusy(true);
     setError('');
     const { error: verifyError } = await supabase.auth.verifyOtp({
       email: email.trim().toLowerCase(),
-      token: code.trim(),
+      token,
       type: 'email',
     });
     setBusy(false);
-    if (verifyError) setError('That code didn\u2019t work. Check it, or send a new one.');
+    if (verifyError) {
+      setError('That code didn’t work. Check it, or send a new one.');
+      setCode('');
+    }
   }
 
   return (
-    <main className="login">
-      <div className="login-card">
-        <p className="wordmark">Lilac Desk</p>
-        <h1 className="h-page">Your order page</h1>
-        {notice && !sent && <p className="error">{notice}</p>}
+    <main className="signin">
+      <aside className="signin-art" aria-hidden="true">
+        <p className="signin-wm">Lilac Desk</p>
+        <div>
+          <p className="signin-quote">Your planner, from brief to download, all in one place.</p>
+          <ol className="signin-steps">
+            <li><span>01</span>Send your brief</li>
+            <li><span>02</span>Review your proofs</li>
+            <li><span>03</span>Download your planner</li>
+          </ol>
+        </div>
+        <p className="signin-foot">Custom digital planners · lilacdesk.com</p>
+      </aside>
 
-        {!sent ? (
-          <form onSubmit={sendLink}>
-            <p className="muted">Enter the email address you ordered with. I'll send you a sign-in link and code.</p>
-            <label className="field-label" htmlFor="login-email">Email</label>
-            <input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <button type="submit" className="btn btn--full" disabled={busy}>
-              {busy ? 'Sending' : 'Send sign-in link'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={verifyCode}>
-            <p className="muted">
-              Check {email} for your sign-in link. If the link opens in a different browser, enter the code from the email here instead.
-            </p>
-            <label className="field-label" htmlFor="login-code">Code</label>
-            <input
-              id="login-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-            <button type="submit" className="btn btn--full" disabled={busy || code.trim().length < 6}>
-              {busy ? 'Checking' : 'Sign in'}
-            </button>
-            <button type="button" className="link-btn" onClick={() => { setSent(false); setCode(''); }}>
-              Use a different email
-            </button>
-          </form>
-        )}
-        {error && <p className="error">{error}</p>}
-      </div>
+      <section className="signin-panel">
+        <p className="signin-wm signin-wm--phone">Lilac Desk</p>
+
+        <div className="signin-form">
+          {!sent ? (
+            <form onSubmit={send}>
+              <p className="label ox">Your order page</p>
+              <h1 className="signin-title">Welcome back.</h1>
+              <p className="signin-lead">Sign in with the email you used at checkout. I’ll send you a code, no password needed.</p>
+              {notice && <p className="error">{notice}</p>}
+              <label className="signin-field">
+                <span>Email</span>
+                <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+              </label>
+              <button type="submit" className="btn btn--block signin-go" disabled={busy || !email.includes('@')}>
+                {busy ? 'Sending…' : 'Send my code'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={(e) => { e.preventDefault(); if (code.length === CODE_LENGTH) verify(code); }}>
+              <button type="button" className="signin-back" onClick={() => { setSent(false); setError(''); }}>
+                <Icon name="back" size={16} /> Change email
+              </button>
+              <h1 className="signin-title">Check your email.</h1>
+              <p className="signin-lead">Enter the 6-digit code sent to <b>{email}</b>, or tap the link in that email.</p>
+              <CodeInput value={code} onChange={setCode} onComplete={verify} disabled={busy} />
+              <button type="submit" className="btn btn--block signin-go" disabled={busy || code.length < CODE_LENGTH}>
+                {busy ? 'Signing in…' : 'Sign in'}
+              </button>
+              <p className="signin-resend">
+                {wait > 0 ? (
+                  <span className="muted">Send a new code in {wait}s</span>
+                ) : (
+                  <button type="button" className="link-btn" onClick={() => send()} disabled={busy}>Send a new code</button>
+                )}
+              </p>
+            </form>
+          )}
+          {error && <p className="error">{error}</p>}
+        </div>
+
+        <p className="signin-help">Trouble signing in? Email <a href="mailto:support@lilacdesk.com">support@lilacdesk.com</a></p>
+      </section>
     </main>
   );
 }

@@ -47,7 +47,7 @@ export function RoundList({ rounds, newest = null }) {
                 {r.verdict && <span className={r.verdict.kind === 'approval' ? 'ok' : ''}> · {verdictText(r)}</span>}
               </span>
             </button>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setOpen(r)}>View</button>
+            <button type="button" className="ibtn" onClick={() => setOpen(r)} aria-label={`View proof ${r.number}`}><Icon name="chevron" size={16} /></button>
           </div>
         ))}
       </div>

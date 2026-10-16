@@ -341,12 +341,11 @@ export function CustomerFiles() {
 
       {!released ? (
         <>
-          <div className="lock">
-            <Icon name="lock" size={28} className="muted" />
-            <p className="serif">Your files unlock when your planner is delivered</p>
-            {order.due_at && <p className="muted small">Estimated {shortDate(order.due_at)}</p>}
-          </div>
-          <div className="section-gap"><OrderChecklist order={order} orderAddons={orderAddons} title="What you’ll receive" /></div>
+          <p className="lock-line">
+            <Icon name="lock" size={16} />
+            <span>Your files unlock when your planner is delivered{order.due_at ? <span className="muted"> · estimated {shortDate(order.due_at)}</span> : null}</span>
+          </p>
+          <div><OrderChecklist order={order} orderAddons={orderAddons} title="What you’ll receive" /></div>
         </>
       ) : (
         <>

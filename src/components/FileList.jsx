@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { canPreview, formatDate, formatSize, isImage, openFile } from '../lib/orderApi';
 import { useViewUrls } from './FilePreview';
 import ProofViewer from './ProofViewer';
+import Icon from './Icons';
 
 // Images open in a viewer first; every file has its own Download button
 export default function FileList({ files, empty = 'No files yet.' }) {
@@ -32,8 +33,8 @@ export default function FileList({ files, empty = 'No files yet.' }) {
                   {file.size ? `, ${formatSize(file.size)}` : ''}
                 </p>
               </div>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={() => openFile(file)}>
-                Download
+              <button type="button" className="ibtn" onClick={() => openFile(file)} aria-label={`Download ${file.name}`}>
+                <Icon name="files" size={16} />
               </button>
             </li>
           );

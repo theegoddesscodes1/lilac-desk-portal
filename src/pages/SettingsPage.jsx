@@ -131,7 +131,7 @@ export default function SettingsPage({ email, isAdmin }) {
   if (!loaded) return <p className="muted page-pad">Loading</p>;
 
   return (
-    <main className="page page--narrow">
+    <main className="page page--narrow settings">
       {isAdmin && <Link to="/notifications" className="back-link"><Icon name="back" size={16} /> Notifications</Link>}
       <h1 className="sr-only">Settings</h1>
 
@@ -155,7 +155,7 @@ export default function SettingsPage({ email, isAdmin }) {
             <label className="field-label" htmlFor="set-alt">Also send emails to</label>
             <p className="field-help">Optional. Updates go to {email} and this address too.</p>
             <input id="set-alt" type="email" value={profile.alt_email} onChange={(e) => setProfile({ ...profile, alt_email: e.target.value })} autoComplete="email" />
-            <button type="submit" className="btn btn--lg">Save details</button>
+            <button type="submit" className="btn btn--sm">Save details</button>
             {saved && <span className="muted small"> {saved}</span>}
           </form>
         </>
@@ -188,7 +188,9 @@ export default function SettingsPage({ email, isAdmin }) {
       )}
       {error && <p className="error">{error}</p>}
 
-      <button type="button" className="btn btn--ghost btn--lg section-gap" onClick={() => supabase.auth.signOut()}>Sign out</button>
+      <div className="settings-foot">
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => supabase.auth.signOut()}>Sign out</button>
+      </div>
     </main>
   );
 }

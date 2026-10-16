@@ -119,36 +119,37 @@ export function AdminCustomer() {
   }
   activity.sort((a, b) => new Date(b.at) - new Date(a.at));
 
+  const since = new Date(c.first).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+
   return (
     <main className="page page--wide">
       <Link to="/customers" className="back-link"><Icon name="back" size={16} /> Customers</Link>
-      <div className="cust-layout">
-        <div className="cust-profile">
-          <Avatar name={c.name} tone="avatar--lg" />
+
+      <div className="cp-head">
+        <Avatar name={c.name} tone="avatar--lg" />
+        <div className="cp-who">
           <h1 className="h-page">{c.name}</h1>
-          <p className="muted small">{c.email}</p>
+          <p className="muted small">{c.business ? `${c.business} · ` : ''}{c.email}</p>
           <div className="pill-row">
-            <span className="pill pill--lilac">{c.orders.length > 1 ? 'Returning' : 'New'}</span>
-            {[...c.licenses].map((l) => <span key={l} className="pill pill--grey">{LICENSES[l]}</span>)}
-          </div>
-          <div className="facts">
-            {c.business && <div className="kv kv--row"><span>Business</span><span>{c.business}</span></div>}
-            <div className="kv kv--row"><span>Customer since</span><span>{new Date(c.first).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span></div>
-            <div className="kv kv--row"><span>Orders</span><span>{c.orders.length}</span></div>
-            <div className="kv kv--row"><span>Total spent</span><span className="num">{money(c.spent)}</span></div>
-            {brief.app && <div className="kv kv--row"><span>Uses</span><span>{brief.app}{brief.device ? `, ${brief.device}` : ''}</span></div>}
-            {c.profile?.phone && <div className="kv kv--row"><span>Phone</span><span>{c.profile.phone}</span></div>}
-            {c.profile?.alt_email && <div className="kv kv--row"><span>Also emails</span><span>{c.profile.alt_email}</span></div>}
-            <div className="kv kv--row"><span>Portfolio</span><span>{portfolio}</span></div>
-          </div>
-          <Notes email={c.email} />
-          <div className="btn-pair">
-            <Link to={`/messages/${latest.id}`} className="btn">Message</Link>
-            <a href={`mailto:${c.email}`} className="btn btn--ghost">Email</a>
+            <span className="ntag">{c.orders.length > 1 ? 'Returning' : 'New'}</span>
+            {[...c.licenses].map((l) => <span key={l} className="ntag">{LICENSES[l]}</span>)}
           </div>
         </div>
+        <div className="cp-actions">
+          <Link to={`/messages/${latest.id}`} className="btn btn--sm">Message</Link>
+          <a href={`mailto:${c.email}`} className="btn btn--ghost btn--sm">Email</a>
+        </div>
+      </div>
+
+      <div className="cp-stats">
+        <div><span className="label muted">Orders</span><b className="num">{c.orders.length}</b></div>
+        <div><span className="label muted">Spent</span><b className="num">{money(c.spent)}</b></div>
+        <div><span className="label muted">Since</span><b className="num">{since}</b></div>
+      </div>
+
+      <div className="cust-layout">
         <div>
-          <h2 className="h-section">Orders</h2>
+          <p className="label muted cp-sec">Orders</p>
           <div className="table">
             {c.orders.map((o) => (
               <Link key={o.id} to={`/orders/${o.id}`} className="tr tr--cord">
@@ -160,10 +161,24 @@ export function AdminCustomer() {
               </Link>
             ))}
           </div>
-          <h2 className="h-section section-gap">Recent activity</h2>
-          {activity.slice(0, 8).map((a, i) => (
-            <div key={i} className="kv kv--row"><span>{a.text}</span><span className="muted small">{ago(a.at)}</span></div>
-          ))}
+
+          <p className="label muted cp-sec">Recent activity</p>
+          <ul className="log">
+            {activity.slice(0, 8).map((a, i) => (
+              <li key={i}><div className="log-row"><span className="log-text"><span>{a.text}</span></span><span className="log-time">{ago(a.at)}</span></div></li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <p className="label muted cp-sec">Details</p>
+          <div className="cp-details">
+            {brief.app && <div className="kv kv--row"><span>Uses</span><span>{brief.app}{brief.device ? `, ${brief.device}` : ''}</span></div>}
+            {c.profile?.phone && <div className="kv kv--row"><span>Phone</span><a href={`tel:${c.profile.phone}`}>{c.profile.phone}</a></div>}
+            {c.profile?.alt_email && <div className="kv kv--row"><span>Also emails</span><span>{c.profile.alt_email}</span></div>}
+            <div className="kv kv--row"><span>Portfolio</span><span>{portfolio}</span></div>
+          </div>
+          <Notes email={c.email} />
         </div>
       </div>
     </main>

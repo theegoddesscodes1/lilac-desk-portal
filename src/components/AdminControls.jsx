@@ -50,51 +50,69 @@ export function StageControl({ order }) {
   }
 
   return (
-    <div className="control">
-      <label className="field-label" htmlFor="stage-select">Stage</label>
-      <div className="control-row">
-        <select id="stage-select" value={stage} onChange={(e) => setStage(e.target.value)}>
-          {ALL_STAGES.map((s) => (
-            <option key={s.key} value={s.key}>{s.label}</option>
-          ))}
-        </select>
-        <button type="button" className="btn" onClick={save} disabled={busy || stage === order.stage}>
-          Update stage
-        </button>
+    <div className="tool">
+      <p className="tool-label">Stage</p>
+      <div className="stage-pills">
+        {ALL_STAGES.map((s) => (
+          <button key={s.key} type="button" className={`pill-opt pill-opt--sm${stage === s.key ? ' pill-opt--on' : ''}`} onClick={() => setStage(s.key)}>
+            {s.label}
+          </button>
+        ))}
       </div>
-      <Check checked={tell} onChange={setTell}>Email the customer about this update</Check>
+      {stage !== order.stage && (
+        <div className="tool-confirm">
+          <Check checked={tell} onChange={setTell}>Notify the customer</Check>
+          <button type="button" className="btn btn--sm" onClick={save} disabled={busy}>
+            {busy ? 'Saving' : `Move to ${stageInfo(stage).label}`}
+          </button>
+        </div>
+      )}
       {error && <p className="error">{error}</p>}
     </div>
   );
 }
 
+function Stepper({ label, value, onChange, min = 0 }) {
+  return (
+    <div className="stepper">
+      <span className="tool-label">{label}</span>
+      <div className="stepper-ctl">
+        <button type="button" onClick={() => onChange(Math.max(min, Number(value) - 1))} aria-label={`Fewer ${label.toLowerCase()}`}><Icon name="minus" size={14} /></button>
+        <span className="num">{value}</span>
+        <button type="button" onClick={() => onChange(Number(value) + 1)} aria-label={`More ${label.toLowerCase()}`}><Icon name="plus" size={14} /></button>
+      </div>
+    </div>
+  );
+}
+
 export function DueAndRevisions({ order }) {
-  const [due, setDue] = useState(toLocalInput(order.due_at));
+  const [due, setDue] = useState(toLocalInput(order.due_at).slice(0, 10));
   const [included, setIncluded] = useState(order.revisions_included);
   const [used, setUsed] = useState(order.revisions_used);
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    setDue(toLocalInput(order.due_at));
+    setDue(toLocalInput(order.due_at).slice(0, 10));
     setIncluded(order.revisions_included);
     setUsed(order.revisions_used);
   }, [order.due_at, order.revisions_included, order.revisions_used]);
 
+  const changed =
+    due !== toLocalInput(order.due_at).slice(0, 10) || Number(included) !== order.revisions_included || Number(used) !== order.revisions_used;
+
   async function save() {
     setMsg('');
+    // A date alone means end of that day
+    const dueIso = due ? new Date(`${due}T17:00`).toISOString() : null;
     const { error } = await supabase
       .from('orders')
-      .update({
-        due_at: due ? new Date(due).toISOString() : null,
-        revisions_included: Number(included),
-        revisions_used: Number(used),
-      })
+      .update({ due_at: dueIso, revisions_included: Number(included), revisions_used: Number(used) })
       .eq('id', order.id);
     setMsg(error ? errorText(error) : 'Saved.');
     if (!error) {
       // First due date on an order (custom orders): let the customer know
-      if (!order.due_at && due) {
-        const when = new Date(due).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+      if (!order.due_at && dueIso) {
+        const when = new Date(dueIso).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
         await supabase.from('messages').insert({ order_id: order.id, sender: 'system', body: `Your delivery date is set: ${when}.` });
         notify(order.id, 'stage');
       }
@@ -103,23 +121,21 @@ export function DueAndRevisions({ order }) {
   }
 
   return (
-    <div className="control">
-      <div className="control-grid">
-        <div>
-          <label className="field-label" htmlFor="due-input">Due date</label>
-          <input id="due-input" type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
-        </div>
-        <div>
-          <label className="field-label" htmlFor="rev-included">Rounds included</label>
-          <input id="rev-included" type="number" min="0" value={included} onChange={(e) => setIncluded(e.target.value)} />
-        </div>
-        <div>
-          <label className="field-label" htmlFor="rev-used">Rounds used</label>
-          <input id="rev-used" type="number" min="0" value={used} onChange={(e) => setUsed(e.target.value)} />
-        </div>
+    <div className="tool">
+      <div className="tool-grid">
+        <label className="tool-field">
+          <span className="tool-label">Due date</span>
+          <input type="date" className="tool-input" value={due} onChange={(e) => setDue(e.target.value)} />
+        </label>
+        <Stepper label="Rounds included" value={included} onChange={setIncluded} />
+        <Stepper label="Rounds used" value={used} onChange={setUsed} />
       </div>
-      <button type="button" className="btn btn--ghost" onClick={save}>Save</button>
-      {msg && <p className="muted small">{msg}</p>}
+      {(changed || msg) && (
+        <div className="tool-confirm">
+          {msg && <span className="muted small">{msg}</span>}
+          {changed && <button type="button" className="btn btn--sm" onClick={save}>Save</button>}
+        </div>
+      )}
     </div>
   );
 }
