@@ -31,7 +31,8 @@ function NoOrder({ title }) {
         <li>Still stuck? Email <a href="mailto:support@lilacdesk.com">support@lilacdesk.com</a> with your order number.</li>
       </ul>
       <div className="btn-row">
-        <a href={`${SHOP_URL}/pages/custom-planners`} className="btn btn--ox">See custom planners</a>
+        <Link to="/quote/new" className="btn btn--ox">Request a custom planner</Link>
+        <a href={`${SHOP_URL}/pages/custom-planners`} className="btn btn--ghost">See planner tiers</a>
         <button type="button" className="btn btn--ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </div>
     </main>
@@ -46,8 +47,9 @@ function Loading({ error }) {
 // ---------- Root: send them to their current order ----------
 
 export function CustomerRoot() {
-  const { loading, current } = useCustomer();
+  const { loading, current, openQuote, quotes } = useCustomer();
   if (loading) return <p className="muted page-pad">Loading your order</p>;
+  if (!current && (openQuote || quotes?.length)) return <Navigate to={`/quotes/${(openQuote || quotes[0]).id}`} replace />;
   if (!current) return <NoOrder title="No custom planner orders yet." />;
   return <Navigate to={`/orders/${current.id}`} replace />;
 }
@@ -81,7 +83,7 @@ function nextStep(order, proofCount, base) {
 
 export function CustomerHome() {
   const { loading, error, order, files, messages, orderAddons, addons } = useOrder();
-  const { orders } = useCustomer();
+  const { orders, openQuote } = useCustomer();
   if (loading || error) return <Loading error={error} />;
 
   const base = `/orders/${order.id}`;
@@ -133,6 +135,17 @@ export function CustomerHome() {
           )}
           <OrderChecklist order={order} orderAddons={orderAddons} />
           <AddExtras order={order} addons={addons} orderAddons={orderAddons} />
+          {openQuote ? (
+            <Link to={`/quotes/${openQuote.id}`} className="mini-row">
+              <span>Your custom planner request<small>{openQuote.status === 'quoted' ? 'Quote ready to review' : 'In conversation'}</small></span>
+              <span className="small"><u>Open</u></span>
+            </Link>
+          ) : (
+            <Link to="/quote/new" className="mini-row">
+              <span>Something custom in mind?<small>Request a quote for a planner beyond the tiers</small></span>
+              <span className="small"><u>Ask</u></span>
+            </Link>
+          )}
 
           {otherActive.length > 0 && (
             <div className="home-list">

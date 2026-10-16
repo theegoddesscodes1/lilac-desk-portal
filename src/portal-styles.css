@@ -1094,3 +1094,32 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .cp-actions .btn { flex: 1; }
   .cust-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
+
+/* ===== Custom planner requests ===== */
+.quote-form { margin-top: 6px; }
+.quote-form .bf-sec { margin-top: 18px; }
+.quote-submit { margin-top: 22px; min-width: 220px; }
+.quote-page .chat-head, .quote-page .convo-head { display: flex; align-items: center; gap: 12px; }
+.quote-page .convo-who { flex: 1; min-width: 0; }
+.quote-page .chat-head .btn, .quote-page .convo-head .btn { flex: none; }
+.qsum { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 18px; margin: 4px 0 8px; padding: 12px 14px; background: #fff; border: 1px solid var(--greige); border-radius: 14px; }
+.qsum div { min-width: 0; }
+.qsum dt { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #8a867f; }
+.qsum dd { margin: 2px 0 0; font-size: 13.5px; overflow-wrap: anywhere; }
+.qcard-quote { align-self: stretch; max-width: 420px; margin: 4px auto; padding: 18px 20px; background: #fff; border: 1px solid var(--oxblood); border-radius: 14px; text-align: left; }
+.qcard-price { font-size: 30px; line-height: 1.1; margin: 4px 0 2px; }
+.qcard-scope { white-space: pre-wrap; font-size: 14px; margin: 12px 0 16px; padding-top: 12px; border-top: 1px solid #EEECE8; }
+.qcard-quote .icon { vertical-align: -2px; }
+.msg-sys-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.quote-panel { margin: 8px 0 12px; padding: 14px 16px 10px; max-height: 60vh; overflow-y: auto; }
+.send-quote { display: grid; gap: 10px; }
+.send-quote .tool-label { margin-bottom: 4px; }
+.send-quote .qarea { min-height: 110px; border-radius: 12px; }
+.send-quote .btn { justify-self: start; }
+.quote-close { display: block; margin: 10px 0 2px; color: #8a867f; }
+.quote-page .compose > span:first-child { width: 0; }
+.quote-page .compose { grid-template-columns: 0 1fr auto; }
+@media (max-width: 899px) {
+  .quote-page .chat-head .btn, .quote-page .convo-head .btn { padding: 7px 10px; font-size: 10.5px; }
+  .quote-back { display: flex; }
+}

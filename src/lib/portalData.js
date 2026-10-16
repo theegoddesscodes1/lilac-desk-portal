@@ -84,18 +84,22 @@ export function threadFor(order, messages = []) {
 const AdminContext = createContext(null);
 
 export function AdminDataProvider({ children }) {
-  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [] });
+  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [] });
 
   const reload = useCallback(async () => {
-    const [orders, orderAddons, messages, profiles, notes] = await Promise.all([
+    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('order_addons').select('*').order('created_at', { ascending: true }),
       supabase.from('messages').select('id, order_id, sender, kind, body, file_id, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('customer_profiles').select('*'),
       supabase.from('customer_notes').select('*'),
+      supabase.from('quotes').select('*').order('created_at', { ascending: false }),
+      supabase.from('quote_messages').select('id, quote_id, sender, kind, body, read_at, created_at').order('created_at', { ascending: true }),
     ]);
     setState({
       loading: false,
+      quotes: quotes.data ?? [],
+      quoteMessages: quoteMessages.data ?? [],
       orders: orders.data ?? [],
       orderAddons: orderAddons.data ?? [],
       messages: messages.data ?? [],
@@ -116,6 +120,8 @@ export function AdminDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_addons' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_messages' }, soon)
       .subscribe(onConnected(soon));
     const stop = keepFresh(reload);
     return () => {
@@ -132,15 +138,34 @@ export function AdminDataProvider({ children }) {
       .filter((o) => messagesByOrder[o.id]?.some((m) => m.sender !== 'system'))
       .map((o) => threadFor(o, messagesByOrder[o.id]))
       .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+    // Quote conversations (custom planner requests), newest activity first
+    const qmByQuote = groupBy(state.quoteMessages, 'quote_id');
+    const quoteThreads = state.quotes
+      .map((q) => {
+        const msgs = qmByQuote[q.id] ?? [];
+        const real = msgs.filter((m) => m.sender !== 'system');
+        const last = real[real.length - 1] || msgs[msgs.length - 1] || null;
+        return {
+          quote: q,
+          last,
+          lastAt: last?.created_at ?? q.created_at,
+          unread: msgs.filter((m) => m.sender === 'customer' && !m.read_at).length,
+          needsReply: q.status === 'open' && real.length > 0 && real[real.length - 1].sender === 'customer',
+        };
+      })
+      .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
     return {
       ...state,
       reload,
       addonsByOrder,
       messagesByOrder,
       threads,
+      quoteThreads,
+      quoteMessagesByQuote: qmByQuote,
+      openQuotes: state.quotes.filter((q) => q.status === 'open').length,
       totalFor: (o) => orderTotal(o, addonsByOrder[o.id]),
       activeCount: state.orders.filter(isActive).length,
-      unreadThreads: threads.filter((t) => t.unread > 0).length,
+      unreadThreads: threads.filter((t) => t.unread > 0).length + quoteThreads.filter((t) => t.unread > 0).length,
     };
   }, [state, reload]);
 
@@ -156,15 +181,24 @@ export function useAdmin() {
 const CustomerContext = createContext(null);
 
 export function CustomerDataProvider({ email, children }) {
-  const [state, setState] = useState({ loading: true, orders: [], messages: [], profile: null });
+  const [state, setState] = useState({ loading: true, orders: [], messages: [], profile: null, quotes: [], quoteMessages: [] });
 
   const reload = useCallback(async () => {
-    const [orders, messages, profile] = await Promise.all([
+    const [orders, messages, profile, quotes, quoteMessages] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('messages').select('id, order_id, sender, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('customer_profiles').select('*').ilike('email', email).maybeSingle(),
+      supabase.from('quotes').select('*').order('created_at', { ascending: false }),
+      supabase.from('quote_messages').select('id, quote_id, sender, read_at, created_at').order('created_at', { ascending: true }),
     ]);
-    setState({ loading: false, orders: orders.data ?? [], messages: messages.data ?? [], profile: profile.data ?? null });
+    setState({
+      loading: false,
+      orders: orders.data ?? [],
+      messages: messages.data ?? [],
+      profile: profile.data ?? null,
+      quotes: quotes.data ?? [],
+      quoteMessages: quoteMessages.data ?? [],
+    });
   }, [email]);
 
   useEffect(() => {
@@ -173,6 +207,8 @@ export function CustomerDataProvider({ email, children }) {
       .channel('customer-all')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_messages' }, reload)
       .subscribe(onConnected(reload));
     const stop = keepFresh(reload);
     return () => {
@@ -186,7 +222,11 @@ export function CustomerDataProvider({ email, children }) {
     const current = state.orders.find(isActive) || state.orders[0] || null;
     const unreadFor = (orderId) =>
       state.messages.filter((m) => m.order_id === orderId && m.sender === 'admin' && !m.read_at).length;
-    return { ...state, email, reload, current, unreadFor };
+    const unreadQuote = (quoteId) =>
+      state.quoteMessages.filter((m) => m.quote_id === quoteId && m.sender !== 'customer' && !m.read_at).length;
+    // A quote still being discussed (not yet paid or closed)
+    const openQuote = state.quotes.find((q) => q.status === 'open' || q.status === 'quoted') || null;
+    return { ...state, email, reload, current, unreadFor, unreadQuote, openQuote };
   }, [state, email, reload]);
 
   return createElement(CustomerContext.Provider, { value }, children);

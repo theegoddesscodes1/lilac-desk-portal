@@ -175,16 +175,32 @@ Deno.serve(async (req) => {
     null;
   const lineItems: any[] = shopOrder.line_items ?? [];
 
+  // 0. A quote from the portal: the invoice carries the quote id (or, for an invoice made by hand
+  //    with the hidden Custom Planner product, the customer's latest open quote is used)
+  const quoteRef =
+    (shopOrder.note_attributes ?? []).find((a: any) => a.name === "portal_quote")?.value ||
+    lineItems.map((i) => lineItemProperty(i, "_portal_quote")).find(Boolean) ||
+    null;
+  let quote: any = null;
+  if (quoteRef) {
+    const { data } = await db.from("quotes").select("*").eq("id", quoteRef).maybeSingle();
+    quote = data;
+  } else if (lineItems.some((i) => String(i.product_id ?? "") === CUSTOM_PRODUCT_ID)) {
+    const { data } = await db.from("quotes").select("*").ilike("email", email).eq("status", "quoted").order("quoted_at", { ascending: false }).limit(1);
+    quote = data?.[0] ?? null;
+  }
+
   // 1. Planner line items become portal orders
   const plannerRows: any[] = [];
   for (const item of lineItems) {
     const productId = String(item.product_id ?? "");
     const variantName = String(item.variant_title ?? "").trim().toLowerCase();
-    const isCustom = Boolean(productId && productId === CUSTOM_PRODUCT_ID);
+    const isQuoteLine = Boolean(lineItemProperty(item, "_portal_quote"));
+    const isCustom = isQuoteLine || Boolean(productId && productId === CUSTOM_PRODUCT_ID);
     const license =
       productId && productId === PERSONAL_PRODUCT_ID ? "personal"
       : productId && productId === COMMERCIAL_PRODUCT_ID ? "commercial"
-      : isCustom ? (variantName.includes("commercial") ? "commercial" : "personal")
+      : isCustom ? (quote?.license || (variantName.includes("commercial") || String(item.title ?? "").toLowerCase().includes("commercial") ? "commercial" : "personal"))
       : null;
     if (!license) continue;
 
@@ -206,7 +222,7 @@ Deno.serve(async (req) => {
         license,
         tier: tierKey,
         revisions_included: tier.revisions,
-        ...(isCustom && shopOrder.note ? { scope_note: String(shopOrder.note).slice(0, 4000) } : {}),
+        ...(isCustom && (quote?.scope || shopOrder.note) ? { scope_note: String(quote?.scope || shopOrder.note).slice(0, 4000) } : {}),
         planner_price: Math.round((linePaid(item) / (Number(item.quantity ?? 1) || 1)) * 100) / 100,
       });
     }
@@ -261,6 +277,14 @@ Deno.serve(async (req) => {
         ),
       );
     }
+  }
+
+  // Mark the quote paid and point its chat at the new order
+  const customOrder = createdOrders.find((o) => o.tier === "custom");
+  if (quote && customOrder) {
+    await db.from("quotes").update({ status: "paid", order_id: customOrder.id, paid_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", quote.id);
+    await db.from("quote_messages").insert({ quote_id: quote.id, sender: "system", kind: "paid", body: "Paid. Your order is ready. Fill in your brief to get started." });
+    await systemMessage(customOrder.id, "This order comes from your custom planner quote. Everything we agreed is at the top of your brief.");
   }
 
   // 2. Add-on line items attach to an order

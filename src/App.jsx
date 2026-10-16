@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BrowserRouter, Link, Navigate, Route, Routes, useMatch } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useMatch, useParams } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { SHOP_URL } from './portal-config';
 import { registerServiceWorker, resyncPush } from './lib/push';
@@ -8,6 +8,7 @@ import Shell from './components/Shell';
 import Icon from './components/Icons';
 import LoginPage from './pages/LoginPage';
 import SettingsPage from './pages/SettingsPage';
+import { QuoteRequestPage, QuoteThread } from './pages/QuotePages';
 import AdminHome from './pages/admin/AdminHome';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrder from './pages/admin/AdminOrder';
@@ -16,6 +17,12 @@ import AdminIncome from './pages/admin/AdminIncome';
 import AdminNotifications, { buildFeed, isNew, useSeenAt } from './pages/admin/AdminNotifications';
 import { AdminCustomer, AdminCustomerList } from './pages/admin/AdminCustomers';
 import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerProofs, CustomerRoot } from './pages/customer/CustomerPages';
+
+// Links from emails and phone notifications use /quotes/:id; on the admin side that lives in Messages
+function QuoteRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/messages/q/${id}`} replace />;
+}
 
 function AdminApp({ email }) {
   useEffect(() => {
@@ -57,6 +64,8 @@ function AdminApp({ email }) {
         <Route path="/orders/:id" element={<AdminOrder />} />
         <Route path="/messages" element={<AdminMessages />} />
         <Route path="/messages/:id" element={<AdminMessages />} />
+        <Route path="/messages/q/:qid" element={<AdminMessages />} />
+        <Route path="/quotes/:id" element={<QuoteRedirect />} />
         <Route path="/income" element={<AdminIncome />} />
         <Route path="/customers" element={<AdminCustomerList />} />
         <Route path="/customers/:email" element={<AdminCustomer />} />
@@ -72,16 +81,24 @@ function CustomerApp({ email }) {
   useEffect(() => {
     resyncPush(email, false);
   }, [email]);
-  const { current, orders, unreadFor } = useCustomer();
+  const { current, orders, unreadFor, quotes, openQuote, unreadQuote, profile } = useCustomer();
+  const profileName = profile?.name || '';
   const match = useMatch('/orders/:id/*');
   const order = orders.find((o) => o.id === match?.params.id) || current;
   const base = order ? `/orders/${order.id}` : '/';
-  const items = [
-    { to: base, label: 'Home', icon: 'home', end: true },
-    { to: `${base}/proofs`, label: 'Proofs', icon: 'proof', badge: order?.stage === 'proof_ready' ? 1 : 0 },
-    { to: `${base}/messages`, label: 'Messages', icon: 'chat', badge: order ? unreadFor(order.id) : 0 },
-    { to: `${base}/files`, label: 'Files', icon: 'files', dot: ['delivered'].includes(order?.stage) },
-  ];
+  const latestQuote = openQuote || quotes?.[0] || null;
+  // No order yet (only a custom planner request): Home and the request chat
+  const items = order
+    ? [
+        { to: base, label: 'Home', icon: 'home', end: true },
+        { to: `${base}/proofs`, label: 'Proofs', icon: 'proof', badge: order?.stage === 'proof_ready' ? 1 : 0 },
+        { to: `${base}/messages`, label: 'Messages', icon: 'chat', badge: order ? unreadFor(order.id) : 0 },
+        { to: `${base}/files`, label: 'Files', icon: 'files', dot: ['delivered'].includes(order?.stage) },
+      ]
+    : [
+        { to: '/', label: 'Home', icon: 'home', end: true },
+        ...(latestQuote ? [{ to: `/quotes/${latestQuote.id}`, label: 'Request', icon: 'chat', badge: unreadQuote(latestQuote.id) }] : []),
+      ];
   return (
     <Shell
       items={items}
@@ -101,6 +118,8 @@ function CustomerApp({ email }) {
         <Route path="/orders/:id/proofs" element={<CustomerProofs />} />
         <Route path="/orders/:id/messages" element={<CustomerMessages />} />
         <Route path="/orders/:id/files" element={<CustomerFiles />} />
+        <Route path="/quote/new" element={<QuoteRequestPage defaultName={profileName} />} />
+        <Route path="/quotes/:id" element={<QuoteThread />} />
         <Route path="/settings" element={<SettingsPage email={email} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
