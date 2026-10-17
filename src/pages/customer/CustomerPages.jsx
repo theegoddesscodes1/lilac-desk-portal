@@ -18,7 +18,7 @@ import Icon from '../../components/Icons';
 import AutoGrow from '../../components/AutoGrow';
 import { DeclinePanel, QuoteCard } from '../QuotePages';
 import { ContactRows } from '../ContactPages';
-import PlannerGuide from '../../components/PlannerGuide';
+import PlannerGuide, { GUIDE_PDF } from '../../components/PlannerGuide';
 import CustomerChatSwitch from '../../components/CustomerChatSwitch';
 import { ReviewSlot, REVIEWABLE } from '../../components/Reviews';
 
@@ -579,6 +579,13 @@ export function CustomerFiles() {
               <button type="button" className="btn btn--sm" onClick={() => openFile(f)}>Download</button>
             </div>
           ))}
+          {finals.length > 0 && (
+            <div className="file-line">
+              <span className="file-icon">PDF</span>
+              <span>How to use your planner<small>Guide · GoodNotes, Notability, Samsung Notes</small></span>
+              <a href={GUIDE_PDF} target="_blank" rel="noreferrer" className="btn btn--ghost btn--sm">Open</a>
+            </div>
+          )}
           <div className="files-acts">
             <ReviewSlot order={order} variant="card" />
             <Link to={`/orders/${order.id}/receipt`} className="btn btn--ghost btn--sm"><Icon name="download" size={14} /> Receipt</Link>

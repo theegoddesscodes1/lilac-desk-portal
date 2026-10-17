@@ -1644,3 +1644,6 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .copy-of { display: block; margin-top: 2px; font-family: var(--sans); font-size: 11px; letter-spacing: 0.02em; color: #8a867f; }
 .other-order > span:first-child { min-width: 0; }
 .other-need { display: inline-flex; margin-top: 7px; }
+.guide-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.guide-head .label { margin: 0; }
+.guide-head .btn { display: inline-flex; align-items: center; gap: 6px; }
