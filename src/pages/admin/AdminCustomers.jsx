@@ -6,6 +6,7 @@ import { ago, isActive, money, shortDate, useAdmin } from '../../lib/portalData'
 import { Avatar, avatarKind, StageDot } from '../../components/Bits';
 import Icon from '../../components/Icons';
 import { shortPlanner } from './AdminHome';
+import { Stars } from '../../components/Reviews';
 
 // One entry per customer email, built from their orders
 function useCustomers() {
@@ -104,7 +105,7 @@ function Notes({ email }) {
 export function AdminCustomer() {
   const { email: raw } = useParams();
   const email = decodeURIComponent(raw).toLowerCase();
-  const { loading, messagesByOrder, addonsByOrder, totalFor, bestOrderFor, isOnline } = useAdmin();
+  const { loading, messagesByOrder, addonsByOrder, totalFor, bestOrderFor, isOnline, reviews = [] } = useAdmin();
   const customers = useCustomers();
   if (loading) return <p className="muted page-pad">Loading</p>;
   const c = customers.find((x) => x.email === email);
@@ -120,6 +121,8 @@ export function AdminCustomer() {
     if (o.brief_submitted_at) activity.push({ at: o.brief_submitted_at, text: `Submitted the brief for ${o.shopify_order_name}` });
     else if (Object.keys(o.brief || {}).length) activity.push({ at: o.last_customer_activity_at, text: `Started the brief for ${o.shopify_order_name} (draft saved)` });
     for (const a of addonsByOrder[o.id] ?? []) activity.push({ at: a.created_at, text: `Bought ${a.name}` });
+    const rv = reviews.find((r) => r.order_id === o.id);
+    if (rv) activity.push({ at: rv.created_at, text: `Left a ${rv.rating}-star review on ${o.shopify_order_name}` });
     for (const m of messagesByOrder[o.id] ?? []) {
       if (m.sender !== 'customer') continue;
       activity.push({ at: m.created_at, text: m.kind === 'revision_request' ? `Requested changes on ${o.shopify_order_name}` : m.kind === 'approval' ? `Approved the proof on ${o.shopify_order_name}` : `Sent a message on ${o.shopify_order_name}` });
@@ -159,15 +162,19 @@ export function AdminCustomer() {
         <div>
           <p className="label muted cp-sec">Orders</p>
           <div className="table">
-            {c.orders.map((o) => (
+            {c.orders.map((o) => {
+              const rv = reviews.find((r) => r.order_id === o.id);
+              return (
               <Link key={o.id} to={`/orders/${o.id}`} className="tr tr--cord">
                 <span className="num">{o.shopify_order_name}</span>
                 <span>{shortPlanner(o)}{addonsByOrder[o.id]?.length ? <span className="muted"> + {addonsByOrder[o.id].map((a) => a.name.toLowerCase()).join(', ')}</span> : null}</span>
                 <StageDot stage={o.stage} />
+                <span className="rev-cell">{rv ? <Stars value={rv.rating} size={12} /> : null}</span>
                 <span className="hide-phone">{shortDate(o.created_at)}</span>
                 <span className="num r">{money(totalFor(o))}</span>
               </Link>
-            ))}
+              );
+            })}
           </div>
 
           <p className="label muted cp-sec">Recent activity</p>

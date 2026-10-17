@@ -7,6 +7,7 @@ import Icon from '../../components/Icons';
 import FilterMenu from '../../components/FilterMenu';
 import { PRESET_TAGS, TagChips } from '../../components/OrderTags';
 import { dueText, shortPlanner } from './AdminHome';
+import { Stars } from '../../components/Reviews';
 
 // Short due text for the table: "in 4 days", "today", "2 days overdue"; nothing once delivered
 function dueCell(o) {
@@ -51,7 +52,8 @@ function matches(o, term, tags = []) {
 }
 
 export default function AdminOrders() {
-  const { loading, orders, addonsByOrder, totalFor, tagsByOrder = {} } = useAdmin();
+  const { loading, orders, addonsByOrder, totalFor, tagsByOrder = {}, reviews = [] } = useAdmin();
+  const ratingFor = useMemo(() => Object.fromEntries(reviews.map((r) => [r.order_id, r.rating])), [reviews]);
   const [tag, setTag] = useState('any');
   const [status, setStatus] = useState('all');
   const [license, setLicense] = useState('any');
@@ -121,7 +123,7 @@ export default function AdminOrders() {
             {g.label} · <span className="ox">{g.rows.length} {g.rows.length === 1 ? 'order' : 'orders'} · {money(g.rows.reduce((n, o) => n + totalFor(o), 0))}</span>
           </p>
           <div className="table">
-            <div className="tr tr--orders th"><span>Order</span><span>Customer</span><span>Planner</span><span>Stage</span><span>Due</span><span className="hide-phone">Ordered</span><span className="r">Paid</span></div>
+            <div className="tr tr--orders th"><span>Order</span><span>Customer</span><span>Planner</span><span>Stage</span><span>Due</span><span className="hide-phone">Ordered</span><span className="hide-phone">Review</span><span className="r">Paid</span></div>
             {g.rows.map((o) => {
               const n = addonsByOrder[o.id]?.length ?? 0;
               return (
@@ -135,6 +137,7 @@ export default function AdminOrders() {
                     return <span className={`due-cell${due.loud ? ' ox' : ''}${due.muted ? ' muted' : ''}`} title={o.due_at ? shortDate(o.due_at) : ''}>{due.text}</span>;
                   })()}
                   <span className="hide-phone">{shortDate(o.created_at)}</span>
+                  <span className="rev-cell">{ratingFor[o.id] ? <Stars value={ratingFor[o.id]} size={12} /> : <span className="muted hide-phone">—</span>}</span>
                   <span className="num r">{money(totalFor(o))}</span>
                 </Link>
               );

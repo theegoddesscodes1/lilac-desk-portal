@@ -9,6 +9,7 @@ import OrderChecklist from '../../components/OrderChecklist';
 import { supabase } from '../../supabaseClient';
 import { ago, approvedProofNumber, money, orderTotal, shortDate, useAdmin } from '../../lib/portalData';
 import { Avatar, StageDot, avatarKind } from '../../components/Bits';
+import { Stars } from '../../components/Reviews';
 import BriefForm from '../../components/BriefForm';
 import FileList from '../../components/FileList';
 import ChatPanel from '../../components/ChatPanel';
@@ -97,7 +98,7 @@ export default function AdminOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { loading, error, order, files, messages, orderAddons } = useOrderData(id);
-  const { orders, totalFor, tagsByOrder = {}, settings } = useAdmin();
+  const { orders, totalFor, tagsByOrder = {}, settings, reviews = [] } = useAdmin();
   const [tab, setTab] = useState('overview');
   const [panel, setPanel] = useState('');
   const [viewing, setViewing] = useState(null);
@@ -179,6 +180,10 @@ export default function AdminOrder() {
           <div className="title-row">
             <h1 className="h-page">{order.shopify_order_name}</h1>
             <StageDot stage={order.stage} />
+            {(() => {
+              const rv = reviews.find((r) => r.order_id === order.id);
+              return rv ? <Link to="/reviews" className="title-stars" title="See their review"><Stars value={rv.rating} size={14} /></Link> : null;
+            })()}
           </div>
           <p className="order-sub">{plannerLabel(order)}</p>
           <TagEditor orderId={order.id} tags={tagsByOrder[order.id] || []} />
