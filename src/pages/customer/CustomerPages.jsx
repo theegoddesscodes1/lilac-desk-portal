@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import { DESIGNER_NAME, FIX_WINDOW_DAYS, REVIEW_URL, SHOP_URL, plannerLabel } from '../../portal-config';
+import { DESIGNER_NAME, FIX_WINDOW_DAYS, SHOP_URL, plannerLabel } from '../../portal-config';
 import OrderChecklist from '../../components/OrderChecklist';
 import { errorText, formatDate, formatSize, notify, openFile, proofRounds, refreshAll, useOrderData } from '../../lib/orderApi';
 import { FileChip, ImageGrid, isImage } from '../../components/FilePreview';
@@ -18,6 +18,8 @@ import Icon from '../../components/Icons';
 import AutoGrow from '../../components/AutoGrow';
 import { DeclinePanel, QuoteCard } from '../QuotePages';
 import { ContactRows } from '../ContactPages';
+import PlannerGuide from '../../components/PlannerGuide';
+import { ReviewSlot, REVIEWABLE } from '../../components/Reviews';
 
 function useOrder() {
   const { id } = useParams();
@@ -206,6 +208,12 @@ export function CustomerHome() {
         </div>
 
         <div className="home-side">
+          {REVIEWABLE.includes(order.stage) && (
+            <div className="home-review">
+              <p className="label muted">How’s your planner?</p>
+              <ReviewSlot order={order} variant="card" autoOpen={new URLSearchParams(window.location.search).get('review') === '1'} />
+            </div>
+          )}
           {lastFromKerry && (
             <div className="home-quote hide-phone">
               <p className="label muted">Latest from {DESIGNER_NAME} · {shortDate(lastFromKerry.created_at)}</p>
@@ -258,10 +266,15 @@ export function CustomerHome() {
             <div className="home-list">
               <p className="label muted">Past orders</p>
               {past.map((o) => (
-                <Link key={o.id} to={`/orders/${o.id}/files`} className="mini-row">
-                  <span>{plannerLabel(o)}<small>{o.shopify_order_name} · Delivered {shortDate(o.delivered_at)}</small></span>
-                  <span className="small"><u>Files</u></span>
-                </Link>
+                <div key={o.id} className="mini-row mini-row--past">
+                  <Link to={`/orders/${o.id}`} className="mini-row-main">
+                    <span>{plannerLabel(o)}<small>{o.shopify_order_name} · Delivered {shortDate(o.delivered_at)}</small></span>
+                  </Link>
+                  <span className="mini-row-acts">
+                    <ReviewSlot order={o} />
+                    <Link to={`/orders/${o.id}/files`} className="small"><u>Files</u></Link>
+                  </span>
+                </div>
               ))}
             </div>
           )}
@@ -497,13 +510,6 @@ export function CustomerMessages() {
 
 // ---------- Files ----------
 
-const APP_TIPS = {
-  GoodNotes: 'Download the PDF, tap Share, then Open in GoodNotes.',
-  Notability: 'Download the PDF, tap Share, then Open in Notability.',
-  Noteshelf: 'Download the PDF, tap Share, then Open in Noteshelf.',
-  'Samsung Notes': 'Download the PDF, then open Samsung Notes and import it with the PDF button.',
-  Xodo: 'Download the PDF, then open it with Xodo.',
-};
 
 export function CustomerFiles() {
   const { loading, error, order, files, messages, orderAddons } = useOrder();
@@ -516,7 +522,6 @@ export function CustomerFiles() {
   const sharedOther = shared.filter((f) => !isImage(f));
   const rounds = proofRounds(files, messages);
   const fixUntil = order.delivered_at ? new Date(new Date(order.delivered_at).getTime() + FIX_WINDOW_DAYS * 86400000) : null;
-  const app = order.brief?.app;
 
   return (
     <main className="page page--narrow">
@@ -548,9 +553,11 @@ export function CustomerFiles() {
               <button type="button" className="btn btn--sm" onClick={() => openFile(f)}>Download</button>
             </div>
           ))}
-          <p className="label muted section-gap">Getting it into {app && APP_TIPS[app] ? app : 'your app'}</p>
-          <p className="small">{(app && APP_TIPS[app]) || 'Download the PDF and open it in your note-taking app.'} Keep the original somewhere safe so you can start fresh any time.</p>
-          {REVIEW_URL && <a href={REVIEW_URL} className="btn btn--ghost btn--lg btn--block section-gap">Leave a review</a>}
+          <div className="files-acts">
+            <ReviewSlot order={order} variant="card" />
+            <Link to={`/orders/${order.id}/receipt`} className="btn btn--ghost btn--sm"><Icon name="download" size={14} /> Receipt</Link>
+          </div>
+          <PlannerGuide order={order} orderAddons={orderAddons} finals={finals} />
         </>
       )}
 

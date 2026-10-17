@@ -57,7 +57,7 @@ function Line({ o, total, note, showDue, tags }) {
 }
 
 export default function AdminHome() {
-  const { loading, orders, messagesByOrder, addonsByOrder, totalFor, quoteThreads = [], contactThreads = [], tagsByOrder = {} } = useAdmin();
+  const { loading, orders, messagesByOrder, addonsByOrder, totalFor, quoteThreads = [], contactThreads = [], tagsByOrder = {}, reviews = [] } = useAdmin();
   const waitingContacts = contactThreads.filter((t) => !t.contact.quote_id && t.needsReply);
   const openRequests = quoteThreads.filter((t) => t.quote.status === 'open' || t.quote.status === 'quoted');
   if (loading) return <p className="muted page-pad">Loading</p>;
@@ -147,6 +147,19 @@ export default function AdminHome() {
                 </Link>
               ))}
             </>
+          )}
+
+          {reviews.length > 0 && (
+            <Link to="/reviews" className="mini-row home-reviews">
+              <span>
+                Reviews · {(reviews.reduce((n, r) => n + r.rating, 0) / reviews.length).toFixed(1)} ★
+                <small>
+                  {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                  {reviews.filter((r) => Date.now() - new Date(r.created_at).getTime() < 7 * 86400000).length > 0 && ` · ${reviews.filter((r) => Date.now() - new Date(r.created_at).getTime() < 7 * 86400000).length} new this week`}
+                </small>
+              </span>
+              <Icon name="chevron" size={16} className="muted" />
+            </Link>
           )}
 
           <p className="label muted section-gap">Needs you · {needs.length}</p>

@@ -164,7 +164,11 @@ export default function StudioSettings() {
               <div className="rem-rule"><span>Send it</span><Days value={draft.review.days} onChange={(v) => setIn('review', { days: v })} max={FIX_WINDOW_DAYS - 1} /><span>days after delivery</span></div>
               <label className="field-label" htmlFor="review-url">Review link <span className="muted">(optional)</span></label>
               <input id="review-url" className="studio-input" value={draft.review.url} onChange={(e) => setIn('review', { url: e.target.value.trim() })} placeholder="https://lilacdesk.com/pages/reviews" />
-              <p className="muted small">Without a link, the email asks them to reply in the portal or tag @thelilacdesk.</p>
+              <p className="muted small">Without a link, the email links to the review button in their portal.</p>
+              <label className="field-label" htmlFor="thanks-code">Thank-you code <span className="muted">(optional)</span></label>
+              <input id="thanks-code" className="studio-input" value={draft.review.thanksCode} onChange={(e) => setIn('review', { thanksCode: e.target.value.trim().toUpperCase() })} placeholder="THANKYOU10" />
+              <input className="studio-input" value={draft.review.thanksOffer} onChange={(e) => setIn('review', { thanksOffer: e.target.value })} placeholder="10% off your next planner" aria-label="What the code gives them" />
+              <p className="muted small">Shown right after someone leaves a review. Create the code first in Shopify under Discounts.</p>
             </div>
           )}
         </div>

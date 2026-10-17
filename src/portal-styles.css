@@ -1522,3 +1522,100 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .tr--orders > :nth-child(4) { grid-column: 1; grid-row: 4; }
   .tr--orders > :nth-child(5) { grid-column: 2; grid-row: 4; text-align: right; font-size: 12.5px; }
 }
+
+/* ---------- v26: reviews ---------- */
+.stars { display: inline-flex; gap: 1px; line-height: 1; letter-spacing: 0; }
+.stars i { font-style: normal; color: #D5D2CC; }
+.stars i.on { color: var(--oxblood); }
+.mini-row--past { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mini-row-main { flex: 1; min-width: 0; text-decoration: none; color: inherit; }
+.mini-row-main > span { display: flex; flex-direction: column; }
+.mini-row-acts { display: flex; align-items: center; gap: 14px; flex: none; }
+.review-link { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--greige); background: #fff; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; color: var(--charcoal); cursor: pointer; white-space: nowrap; }
+.review-link span { color: var(--oxblood); }
+.review-link:hover { border-color: var(--oxblood); }
+.review-done { display: inline-flex; align-items: center; gap: 8px; }
+.home-review { display: grid; gap: 10px; justify-items: start; padding-bottom: 18px; border-bottom: 1px solid var(--greige); }
+.home-review .label { margin: 0; }
+.review-form { display: grid; gap: 12px; }
+.star-pick { display: flex; align-items: center; gap: 4px; }
+.star-pick button { border: 0; background: none; padding: 0 2px; font-size: 34px; line-height: 1; color: #D5D2CC; cursor: pointer; transition: transform 0.1s, color 0.1s; }
+.star-pick button.on { color: var(--oxblood); }
+.star-pick button:active { transform: scale(0.9); }
+.star-word { margin-left: 10px; font-size: 14px; color: #6c6862; }
+.review-body { border: 1px solid var(--greige); border-radius: 14px; padding: 10px 14px; min-height: 96px; font: inherit; font-size: 14.5px; line-height: 1.5; resize: none; width: 100%; }
+.review-photo-add { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px dashed var(--greige); border-radius: 999px; font-size: 13px; cursor: pointer; }
+.review-photo-add input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.review-photo-prev { position: relative; display: inline-block; }
+.review-photo-prev img { width: 96px; height: 96px; object-fit: cover; border-radius: 14px; display: block; }
+.review-photo-prev button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--charcoal); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.review-form .qcheck small { display: block; }
+.review-form .btn--ox { justify-self: start; }
+.review-thanks { display: grid; gap: 10px; justify-items: center; text-align: center; padding: 10px 0 4px; }
+.review-thanks .sheet-title { margin: 6px 0 0; }
+.thanks-code { width: 100%; margin: 8px 0 6px; padding: 16px; border: 1px solid var(--lilac); border-radius: 18px; background: #F5F2F8; display: grid; gap: 6px; justify-items: center; }
+.thanks-code p { margin: 0; }
+.code-chip { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; border: 1px dashed var(--oxblood); background: #fff; border-radius: 14px; padding: 10px 22px; cursor: pointer; font: inherit; }
+.code-chip b { font-family: var(--sans); font-weight: 500; letter-spacing: 0.14em; font-size: 18px; color: var(--oxblood); }
+.code-chip span { font-size: 11.5px; color: #8a867f; }
+@media (max-width: 899px) {
+  .mini-row--past { align-items: flex-start; flex-direction: column; gap: 8px; }
+}
+.home-reviews { margin-top: 18px; }
+.rv-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.rv-head .h-page { margin: 2px 0 4px; }
+.rv-head .stars { vertical-align: -2px; margin-right: 4px; }
+.rv-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.rv { border: 1px solid var(--greige); border-radius: 18px; background: #fff; padding: 18px; display: grid; gap: 12px; align-content: start; }
+.rv-top { display: flex; align-items: center; gap: 12px; }
+.rv-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rv-who b { font-weight: 500; font-size: 14.5px; }
+.rv-body { margin: 0; font-family: var(--serif); font-style: italic; font-size: 16.5px; line-height: 1.5; }
+.rv-photo { padding: 0; border: 0; background: none; cursor: zoom-in; justify-self: start; }
+.rv-photo img { width: 140px; height: 140px; object-fit: cover; border-radius: 14px; display: block; }
+.rv-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid #EEECE8; }
+.rv-switch { display: inline-flex; align-items: center; gap: 10px; font-size: 13.5px; }
+@media (max-width: 899px) { .rv-list { grid-template-columns: 1fr; } }
+
+/* ---------- v27: how to use your planner ---------- */
+.files-acts { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 0 4px; }
+.files-acts .btn .icon { vertical-align: -2px; margin-right: 4px; }
+.guide { margin-top: 8px; }
+.guide-sec { border-bottom: 1px solid var(--greige); }
+.guide-sec:first-of-type { border-top: 1px solid var(--charcoal); }
+.guide-sec summary { list-style: none; cursor: pointer; padding: 14px 0; font-family: var(--serif); font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+.guide-sec summary::-webkit-details-marker { display: none; }
+.guide-sec summary::after { content: '+'; font-family: var(--sans); font-weight: 300; font-size: 20px; color: #8a867f; }
+.guide-sec[open] summary::after { content: '–'; }
+.guide-body { padding: 0 0 16px; font-size: 14.5px; line-height: 1.6; }
+.guide-body ol, .guide-body ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.guide-tip { margin: 10px 0 0; font-size: 13px; color: #6c6862; }
+.guide-help { margin: 14px 0 0; font-size: 13.5px; color: #6c6862; }
+
+/* ---------- v28: receipt ---------- */
+.receipt-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.receipt-bar .back-link { margin: 0; }
+.receipt-bar .btn .icon { vertical-align: -2px; margin-right: 6px; }
+.receipt { background: #fff; border: 1px solid var(--greige); border-radius: 18px; padding: clamp(22px, 5vw, 44px); }
+.receipt p { margin: 0; }
+.receipt-head { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-bottom: 22px; border-bottom: 1px solid var(--charcoal); }
+.receipt-wm { font-family: var(--serif); font-size: 22px; letter-spacing: 0.32em; text-transform: uppercase; margin-bottom: 4px !important; }
+.receipt-meta { text-align: right; }
+.receipt-meta .label { margin-bottom: 4px; }
+.receipt-to { padding: 20px 0; display: grid; gap: 2px; }
+.receipt-to .label { margin-bottom: 4px; }
+.receipt-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.receipt-table th { text-align: left; font-weight: 400; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #8a867f; padding: 8px 0; border-bottom: 1px solid var(--greige); }
+.receipt-table td { padding: 12px 0; border-bottom: 1px solid #EEECE8; vertical-align: top; }
+.receipt-table td small { display: block; color: #8a867f; font-size: 12px; margin-top: 2px; }
+.receipt-table .r { text-align: right; white-space: nowrap; padding-left: 12px; }
+.receipt-table tfoot td { border-bottom: 0; padding: 8px 0; }
+.receipt-total td { font-family: var(--serif); font-size: 19px; padding-top: 16px !important; border-top: 1px solid var(--charcoal); }
+.receipt-note { margin-top: 22px !important; font-size: 12.5px; color: #6c6862; line-height: 1.55; }
+@media print {
+  .side, .ptop, .bnav, .no-print { display: none !important; }
+  .app, .app-main { display: block !important; padding: 0 !important; margin: 0 !important; }
+  .receipt-page { padding: 0 !important; max-width: none !important; }
+  .receipt { border: 0; padding: 0; }
+  body { background: #fff !important; }
+}

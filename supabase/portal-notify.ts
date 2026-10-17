@@ -33,6 +33,7 @@ const PUSH: Record<string, (o: any, toCustomer: boolean) => { title: string; bod
   brief_submitted: (o) => ({ title: `Brief in: ${o.shopify_order_name ?? ""}`, body: `${o.customer_name ?? o.customer_email} submitted their brief. The countdown has started.` }),
   revision_request: (o) => ({ title: `Changes requested: ${o.shopify_order_name ?? ""}`, body: `${o.customer_name ?? o.customer_email} sent a list of changes.` }),
   approved: (o) => ({ title: `Proof approved: ${o.shopify_order_name ?? ""}`, body: `${o.customer_name ?? o.customer_email} approved the proof. Final files are next.` }),
+  review: (o) => ({ title: `New review from ${o.customer_name ?? o.customer_email}`, body: `On ${o.shopify_order_name ?? "their order"}. Tap to read it.` }),
 };
 
 async function push(to: "admin" | "customer", email: string | null, title: string, body: string, url: string) {
@@ -87,6 +88,12 @@ const EVENTS: Record<string, { to: Recipient; subject: string; heading: string; 
     subject: "Revision requested",
     heading: "A customer requested changes",
     body: "Open the order to see the list of changes.",
+  },
+  review: {
+    to: "admin",
+    subject: "New review",
+    heading: "A customer left a review",
+    body: "Open Reviews in your portal to read it and choose whether to show it on the shop.",
   },
   approved: {
     to: "admin",

@@ -32,7 +32,7 @@ export function useViewUrls(files) {
   return urls;
 }
 
-export function Lightbox({ file, url, onClose }) {
+export function Lightbox({ file, url, onClose, onDownload }) {
   useEffect(() => {
     const esc = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', esc);
@@ -47,7 +47,7 @@ export function Lightbox({ file, url, onClose }) {
     <div className="lightbox" role="dialog" aria-label={file.name} onClick={onClose}>
       <div className="lightbox-bar" onClick={(e) => e.stopPropagation()}>
         <span className="lightbox-name">{file.name}</span>
-        <button type="button" className="btn btn--sm btn--light" onClick={() => openFile(file)}>
+        <button type="button" className="btn btn--sm btn--light" onClick={() => (onDownload ? onDownload() : openFile(file))}>
           <Icon name="files" size={14} /> Download
         </button>
         <button type="button" className="lightbox-close" onClick={onClose} aria-label="Close">

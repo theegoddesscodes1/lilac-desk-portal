@@ -85,10 +85,10 @@ export function threadFor(order, messages = []) {
 const AdminContext = createContext(null);
 
 export function AdminDataProvider({ children }) {
-  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [], orderTags: [], archive: [], studio: null });
+  const [state, setState] = useState({ loading: true, orders: [], orderAddons: [], messages: [], profiles: [], notes: [], quotes: [], quoteMessages: [], contacts: [], contactMessages: [], orderTags: [], archive: [], studio: null, reviews: [] });
 
   const reload = useCallback(async () => {
-    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages, orderTags, archive, studio] = await Promise.all([
+    const [orders, orderAddons, messages, profiles, notes, quotes, quoteMessages, contacts, contactMessages, orderTags, archive, studio, reviews] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('order_addons').select('*').order('created_at', { ascending: true }),
       supabase.from('messages').select('id, order_id, sender, kind, body, file_id, read_at, created_at').order('created_at', { ascending: true }),
@@ -101,12 +101,14 @@ export function AdminDataProvider({ children }) {
       supabase.from('order_tags').select('*'),
       supabase.from('inbox_archive').select('*'),
       supabase.from('studio_settings').select('data').eq('id', 1).maybeSingle(),
+      supabase.from('reviews').select('*').order('created_at', { ascending: false }),
     ]);
     setState({
       loading: false,
       orderTags: orderTags.data ?? [],
       archive: archive.data ?? [],
       studio: studio.data?.data ?? null,
+      reviews: reviews.data ?? [],
       contacts: contacts.data ?? [],
       contactMessages: contactMessages.data ?? [],
       quotes: quotes.data ?? [],
@@ -150,6 +152,7 @@ export function AdminDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_tags' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_archive' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'studio_settings' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, soon)
       .subscribe(onConnected(soon));
     const stop = keepFresh(reload);
     return () => {
@@ -328,10 +331,10 @@ function useAnnouncePresence(email) {
 
 export function CustomerDataProvider({ email, children }) {
   useAnnouncePresence(email);
-  const [state, setState] = useState({ loading: true, orders: [], messages: [], profile: null, quotes: [], quoteMessages: [], contacts: [], contactMessages: [] });
+  const [state, setState] = useState({ loading: true, orders: [], messages: [], profile: null, quotes: [], quoteMessages: [], contacts: [], contactMessages: [], reviews: [] });
 
   const reload = useCallback(async () => {
-    const [orders, messages, profile, quotes, quoteMessages, contacts, contactMessages] = await Promise.all([
+    const [orders, messages, profile, quotes, quoteMessages, contacts, contactMessages, reviews] = await Promise.all([
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('messages').select('id, order_id, sender, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('customer_profiles').select('*').ilike('email', email).maybeSingle(),
@@ -339,6 +342,7 @@ export function CustomerDataProvider({ email, children }) {
       supabase.from('quote_messages').select('id, quote_id, sender, read_at, created_at').order('created_at', { ascending: true }),
       supabase.from('contacts').select('*').order('updated_at', { ascending: false }),
       supabase.from('contact_messages').select('id, contact_id, sender, read_at, created_at').order('created_at', { ascending: true }),
+      supabase.from('reviews').select('*'),
     ]);
     setState({
       loading: false,
@@ -349,6 +353,7 @@ export function CustomerDataProvider({ email, children }) {
       quoteMessages: quoteMessages.data ?? [],
       contacts: contacts.data ?? [],
       contactMessages: contactMessages.data ?? [],
+      reviews: reviews.data ?? [],
     });
   }, [email]);
 
@@ -361,6 +366,7 @@ export function CustomerDataProvider({ email, children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_messages' }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages' }, reload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, reload)
       .subscribe(onConnected(reload));
     const stop = keepFresh(reload);
     return () => {
@@ -380,7 +386,8 @@ export function CustomerDataProvider({ email, children }) {
     const openQuote = state.quotes.find((q) => q.status === 'open' || q.status === 'quoted') || null;
     const unreadContact = (contactId) =>
       state.contactMessages.filter((m) => m.contact_id === contactId && m.sender === 'admin' && !m.read_at).length;
-    return { ...state, email, reload, current, unreadFor, unreadQuote, openQuote, unreadContact };
+    const reviewFor = (orderId) => state.reviews.find((r) => r.order_id === orderId) || null;
+    return { ...state, email, reload, current, unreadFor, unreadQuote, openQuote, unreadContact, reviewFor };
   }, [state, email, reload]);
 
   return createElement(CustomerContext.Provider, { value }, children);

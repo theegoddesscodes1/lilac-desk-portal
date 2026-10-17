@@ -1,0 +1,96 @@
+{%- comment -%}
+  Luna Reviews: shows the reviews you switched on ("Show on the shop") in your order portal.
+  Paste your Supabase anon (public) key in the section settings once. It's the same public key the portal uses.
+{%- endcomment -%}
+{%- assign sid = section.id -%}
+{%- assign lrv_base = section.settings.supabase_url | default: 'https://fdxbqdhzzyyggdtbjwnz.supabase.co' | strip -%}
+
+<style>
+  #lrv-{{ sid }} {
+    --c: #333333; --w: #FAFAF8; --l: #D6D0DE; --o: #5C181E; --g: #D5D2CC;
+    --serif: 'Times New Roman', Times, serif; --sans: 'Jost', sans-serif;
+    background: var(--w); color: var(--c); font-family: var(--sans); font-weight: 300;
+    padding: clamp(40px, 6vw, 80px) 16px;
+  }
+  #lrv-{{ sid }} *, #lrv-{{ sid }} *::before, #lrv-{{ sid }} *::after { box-sizing: border-box; }
+  #lrv-{{ sid }} p { margin: 0; }
+  #lrv-{{ sid }} .lrv-wrap { max-width: 1120px; margin: 0 auto; }
+  #lrv-{{ sid }} .lrv-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
+  #lrv-{{ sid }} .lrv-eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--o); margin-bottom: 10px; }
+  #lrv-{{ sid }} h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(28px, 3.4vw, 36px); line-height: 1.15; margin: 0; letter-spacing: 0; text-transform: none; color: var(--c); }
+  #lrv-{{ sid }} .lrv-avg { font-size: 14px; color: #6c6862; }
+  #lrv-{{ sid }} .lrv-avg b { font-family: var(--serif); font-weight: 400; font-size: 22px; color: var(--c); margin-right: 6px; }
+  #lrv-{{ sid }} .lrv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  #lrv-{{ sid }} .lrv-card { background: #fff; border: 1px solid var(--g); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  #lrv-{{ sid }} .lrv-stars { color: var(--o); letter-spacing: 2px; font-size: 15px; }
+  #lrv-{{ sid }} .lrv-stars span { color: var(--g); }
+  #lrv-{{ sid }} .lrv-body { font-family: var(--serif); font-style: italic; font-size: 17px; line-height: 1.55; }
+  #lrv-{{ sid }} .lrv-photo { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; display: block; }
+  #lrv-{{ sid }} .lrv-who { margin-top: auto; padding-top: 12px; border-top: 1px solid #EEECE8; font-size: 13px; }
+  #lrv-{{ sid }} .lrv-who b { font-weight: 400; display: block; font-size: 14px; }
+  #lrv-{{ sid }} .lrv-who span { color: #8a867f; }
+  #lrv-{{ sid }} .lrv-empty { color: #8a867f; }
+  @media (max-width: 900px) {
+    #lrv-{{ sid }} .lrv-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 82%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; scrollbar-width: none; }
+    #lrv-{{ sid }} .lrv-grid::-webkit-scrollbar { display: none; }
+    #lrv-{{ sid }} .lrv-card { scroll-snap-align: start; }
+  }
+</style>
+
+<section id="lrv-{{ sid }}" hidden>
+  <div class="lrv-wrap">
+    <div class="lrv-head">
+      <div>
+        <p class="lrv-eyebrow">{{ section.settings.eyebrow }}</p>
+        <h2>{{ section.settings.heading }}</h2>
+      </div>
+      <p class="lrv-avg"></p>
+    </div>
+    <div class="lrv-grid"></div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('lrv-{{ sid }}');
+    var base = {{ lrv_base | json }}.replace(/\/+$/, '');
+    var key = {{ section.settings.anon_key | strip | json }};
+    var limit = {{ section.settings.limit | default: 6 }};
+    if (!root || !key) return;
+    var esc = function (s) { return String(s || '').replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    fetch(base + '/rest/v1/rpc/featured_reviews', {
+      method: 'POST',
+      headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: '{}'
+    })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (rows) {
+        if (!rows || !rows.length) return;
+        var avg = rows.reduce(function (n, r) { return n + r.rating; }, 0) / rows.length;
+        root.querySelector('.lrv-avg').innerHTML = '<b>' + avg.toFixed(1) + '</b>out of 5 from happy planners';
+        root.querySelector('.lrv-grid').innerHTML = rows.slice(0, limit).map(function (r) {
+          var stars = '★★★★★'.slice(0, r.rating) + '<span>' + '★★★★★'.slice(r.rating) + '</span>';
+          var photo = r.photo_path ? '<img class="lrv-photo" loading="lazy" alt="" src="' + base + '/storage/v1/object/public/review-photos/' + esc(r.photo_path) + '">' : '';
+          return '<article class="lrv-card"><p class="lrv-stars" aria-label="' + r.rating + ' out of 5">' + stars + '</p>' + photo +
+            (r.body ? '<p class="lrv-body">“' + esc(r.body) + '”</p>' : '') +
+            '<p class="lrv-who"><b>' + esc(r.name || 'A Lilac Desk customer') + '</b><span>' + esc(r.planner || 'Custom planner') + '</span></p></article>';
+        }).join('');
+        root.hidden = false;
+      })
+      .catch(function () {});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Luna Reviews",
+  "settings": [
+    { "type": "text", "id": "anon_key", "label": "Supabase anon public key", "info": "Supabase > Project Settings > API > anon public key" },
+    { "type": "text", "id": "supabase_url", "label": "Supabase project URL", "default": "https://fdxbqdhzzyyggdtbjwnz.supabase.co" },
+    { "type": "text", "id": "eyebrow", "label": "Small heading", "default": "Kind words" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Planned with love, used every day." },
+    { "type": "range", "id": "limit", "label": "Reviews to show", "min": 3, "max": 12, "step": 3, "default": 6 }
+  ],
+  "presets": [{ "name": "Luna Reviews" }]
+}
+{% endschema %}

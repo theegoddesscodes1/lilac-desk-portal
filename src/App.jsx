@@ -16,8 +16,10 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminOrder from './pages/admin/AdminOrder';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminIncome from './pages/admin/AdminIncome';
+import AdminReviews from './pages/admin/AdminReviews';
 import AdminNotifications, { buildFeed, isNew, useSeenAt } from './pages/admin/AdminNotifications';
 import { AdminCustomer, AdminCustomerList } from './pages/admin/AdminCustomers';
+import Receipt from './pages/customer/Receipt';
 import { CustomerBrief, CustomerFiles, CustomerHome, CustomerMessages, CustomerProofs, CustomerRoot } from './pages/customer/CustomerPages';
 
 // Links from emails and phone notifications use /quotes/:id; on the admin side that lives in Messages
@@ -76,6 +78,7 @@ function AdminApp({ email }) {
         <Route path="/quotes/:id" element={<QuoteRedirect />} />
         <Route path="/contact/:id" element={<ContactRedirect />} />
         <Route path="/income" element={<AdminIncome />} />
+        <Route path="/reviews" element={<AdminReviews />} />
         <Route path="/customers" element={<AdminCustomerList />} />
         <Route path="/customers/:email" element={<AdminCustomer />} />
         <Route path="/notifications" element={<AdminNotifications seenAt={seenAt} onSeen={markSeen} />} />
@@ -127,6 +130,7 @@ function CustomerApp({ email }) {
         <Route path="/orders/:id/proofs" element={<CustomerProofs />} />
         <Route path="/orders/:id/messages" element={<CustomerMessages />} />
         <Route path="/orders/:id/files" element={<CustomerFiles />} />
+        <Route path="/orders/:id/receipt" element={<Receipt />} />
         <Route path="/quote/new" element={<QuoteRequestPage defaultName={profileName} />} />
         <Route path="/quotes/:id" element={<QuoteThread />} />
         <Route path="/contact/:id" element={<ContactThread />} />

@@ -205,11 +205,11 @@ Deno.serve(async (req) => {
       const since = daysAgo(o.delivered_at);
       if (since < settings.review.days || since > FIX_WINDOW_DAYS) continue;
       if (!(await claim("review", o.id))) continue;
-      const url = settings.review.url || `${PORTAL_URL}/orders/${o.id}/messages`;
+      const url = settings.review.url || `${PORTAL_URL}/orders/${o.id}?review=1`;
       const res = await emailCustomer(o, "How’s your planner?", emailLayout(
         `How’s your planner, ${escapeHtml(firstName(o))}?`,
-        `<p>I hope you’re loving it. If you have a minute, a short review means the world to a small studio like mine and helps other planners find me.</p><p>And if you have a photo of it in use, I’d love to see it: share it in your order chat or tag <b>@thelilacdesk</b>.</p><p>If anything needs fixing, you still have until ${new Date(new Date(o.delivered_at).getTime() + FIX_WINDOW_DAYS * DAY).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: TZ })} to let me know, free.</p>`,
-        settings.review.url ? "Leave a review" : "Share how it’s going",
+        `<p>I hope you’re loving it. If you have a minute, a short review means the world to a small studio like mine and helps other planners find me.</p><p>It takes a minute: tap a star rating, add a few words, and a photo of it in use if you have one. You can also tag <b>@thelilacdesk</b>.</p><p>If anything needs fixing, you still have until ${new Date(new Date(o.delivered_at).getTime() + FIX_WINDOW_DAYS * DAY).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: TZ })} to let me know, free.</p>`,
+        "Leave a review",
         url,
       ));
       log.push(`review ${o.shopify_order_name}: ${res}`);

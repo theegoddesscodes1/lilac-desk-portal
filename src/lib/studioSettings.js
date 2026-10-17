@@ -28,7 +28,7 @@ export const DEFAULT_SETTINGS = {
   ],
   reminders: { on: true, briefDays: 3, proofDays: 4, lastCallDays: 25 },
   digest: { on: true, hour: 8 },
-  review: { on: true, days: 4, url: '' },
+  review: { on: true, days: 4, url: '', thanksCode: '', thanksOffer: '10% off your next planner' },
 };
 
 export function mergeSettings(saved) {

@@ -28,7 +28,7 @@ function writeSeen(t) {
 // New = after the last visit to this page, and (for messages) not already opened in the chat
 export const isNew = (item, seenAt) => new Date(item.at).getTime() > seenAt && !item.readAt;
 
-export function buildFeed({ orders, orderAddons, messages, quotes = [], quoteMessages = [], contacts = [], contactMessages = [] }) {
+export function buildFeed({ orders, orderAddons, messages, quotes = [], quoteMessages = [], contacts = [], contactMessages = [], reviews = [] }) {
   const byId = Object.fromEntries(orders.map((o) => [o.id, o]));
   const who = (o) => firstName(o);
   const items = [];
@@ -86,6 +86,12 @@ export function buildFeed({ orders, orderAddons, messages, quotes = [], quoteMes
     items.push({ id: `cm-${m.id}`, at: m.created_at, order: person, kind: 'contact', text: firstMsg ? <>{c.name || c.email} sent a message · {c.topic}</> : <>{firstName(person)} replied to your message</>, sub: m.body, to: `/messages/c/${c.id}`, readAt: m.read_at });
   }
 
+  for (const r of reviews) {
+    const o = byId[r.order_id];
+    if (!o) continue;
+    items.push({ id: `rv-${r.id}`, at: r.created_at, order: o, kind: 'review', text: <>{who(o)} left a {r.rating}-star review</>, sub: r.body || '', to: '/reviews' });
+  }
+
   return items.filter((i) => i.at).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 80);
 }
 
@@ -99,7 +105,7 @@ function bucket(at) {
   return 'Earlier';
 }
 
-const TAG = { changes: 'Changes', approved: 'Approved', addon: 'Add-on', brief: 'Brief', order: 'New order', quote: 'Request', quotemsg: 'Quote', contact: 'Contact' };
+const TAG = { changes: 'Changes', approved: 'Approved', addon: 'Add-on', brief: 'Brief', order: 'New order', quote: 'Request', quotemsg: 'Quote', contact: 'Contact', review: 'Review' };
 
 export default function AdminNotifications({ seenAt, onSeen }) {
   const data = useAdmin();
