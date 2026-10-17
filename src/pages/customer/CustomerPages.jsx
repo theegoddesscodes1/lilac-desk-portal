@@ -19,6 +19,7 @@ import AutoGrow from '../../components/AutoGrow';
 import { DeclinePanel, QuoteCard } from '../QuotePages';
 import { ContactRows } from '../ContactPages';
 import PlannerGuide from '../../components/PlannerGuide';
+import CustomerChatSwitch from '../../components/CustomerChatSwitch';
 import { ReviewSlot, REVIEWABLE } from '../../components/Reviews';
 
 function useOrder() {
@@ -503,6 +504,7 @@ export function CustomerMessages() {
           <p className="muted small">Usually replies within a day · {order.shopify_order_name}</p>
         </div>
       </div>
+      <CustomerChatSwitch active={{ type: 'order', id: order.id }} />
       <ChatPanel orderId={order.id} messages={messages} files={files} viewer="customer" disabled={order.stage === 'closed'} />
     </main>
   );

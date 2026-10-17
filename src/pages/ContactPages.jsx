@@ -7,6 +7,7 @@ import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
 import { SeenLine } from '../components/ChatPanel';
 import AutoGrow from '../components/AutoGrow';
+import CustomerChatSwitch from '../components/CustomerChatSwitch';
 
 // Messages sent from the Contact page on lilacdesk.com
 
@@ -124,6 +125,7 @@ export function ContactThread({ admin = false, contactId, embedded = false, head
           </div>
         )}
       </div>
+      {!admin && <CustomerChatSwitch active={{ type: 'contact', id }} />}
 
       <div className="chat">
         <div className="chat-list" ref={listRef}>

@@ -8,6 +8,7 @@ import { Avatar } from '../components/Bits';
 import Icon from '../components/Icons';
 import { SeenLine } from '../components/ChatPanel';
 import AutoGrow from '../components/AutoGrow';
+import CustomerChatSwitch from '../components/CustomerChatSwitch';
 
 const STATUS = { open: 'Talking it through', quoted: 'Quote sent', paid: 'Paid', closed: 'Closed' };
 const statusText = (q, admin) => (q.status === 'closed' && q.closed_by === 'customer' ? (admin ? 'Declined' : 'You declined') : STATUS[q.status]);
@@ -388,6 +389,7 @@ export function QuoteThread({ admin = false, quoteId, embedded = false, headExtr
           <Link to={`/orders/${quote.order_id}`} className="btn btn--sm">{admin ? 'Open order' : 'Go to your order'}</Link>
         )}
       </div>
+      {!admin && <CustomerChatSwitch active={{ type: 'quote', id }} />}
 
       <div className="chat">
         <div className="chat-list" ref={listRef}>

@@ -1619,3 +1619,10 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .receipt { border: 0; padding: 0; }
   body { background: #fff !important; }
 }
+
+/* ---------- Customer chat switcher ---------- */
+.cchips { flex: none; margin: 12px 0 8px; position: relative; }
+.cchips--r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+.cchips--l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px); mask-image: linear-gradient(90deg, transparent, #000 36px); }
+.cchips--l.cchips--r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+.cchips .ochip { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
