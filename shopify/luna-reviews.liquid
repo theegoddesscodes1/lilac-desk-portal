@@ -30,6 +30,7 @@
   #lrv-{{ sid }} .lrv-who b { font-weight: 400; display: block; font-size: 14px; }
   #lrv-{{ sid }} .lrv-who span { color: #8a867f; }
   #lrv-{{ sid }} .lrv-empty { color: #8a867f; }
+  #lrv-{{ sid }} .lrv-status { margin-top: 8px; padding: 14px 16px; border: 1px dashed var(--g); border-radius: 14px; font-size: 13.5px; color: #6c6862; }
   @media (max-width: 900px) {
     #lrv-{{ sid }} .lrv-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 82%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; scrollbar-width: none; }
     #lrv-{{ sid }} .lrv-grid::-webkit-scrollbar { display: none; }
@@ -37,7 +38,7 @@
   }
 </style>
 
-<section id="lrv-{{ sid }}" hidden>
+<section id="lrv-{{ sid }}"{% unless request.design_mode %} hidden{% endunless %}>
   <div class="lrv-wrap">
     <div class="lrv-head">
       <div>
@@ -47,6 +48,9 @@
       <p class="lrv-avg"></p>
     </div>
     <div class="lrv-grid"></div>
+    {%- if request.design_mode -%}
+      <p class="lrv-status">Checking for reviews…</p>
+    {%- endif -%}
   </div>
 </section>
 
@@ -56,16 +60,24 @@
     var base = {{ lrv_base | json }}.replace(/\/+$/, '');
     var key = {{ section.settings.anon_key | strip | json }};
     var limit = {{ section.settings.limit | default: 6 }};
-    if (!root || !key) return;
+    var status = root ? root.querySelector('.lrv-status') : null;
+    var say = function (t) { if (status) status.textContent = t; };
+    if (!root) return;
+    if (!key) return say('Paste your Supabase anon public key in this section’s settings.');
     var esc = function (s) { return String(s || '').replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
     fetch(base + '/rest/v1/rpc/featured_reviews', {
       method: 'POST',
       headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
       body: '{}'
     })
-      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (r) {
+        if (!r.ok) return r.text().then(function (t) { say('Couldn’t load reviews (' + r.status + '). ' + (r.status === 404 ? 'Run the reviews SQL file in Supabase first.' : r.status === 401 ? 'Check the anon key.' : t.slice(0, 160))); return null; });
+        return r.json();
+      })
       .then(function (rows) {
-        if (!rows || !rows.length) return;
+        if (!rows) return;
+        if (!rows.length) return say('No reviews switched on yet. In your portal, open Reviews and turn on “Show on the shop” for the ones you want here. (Only you see this message, in the theme editor.)');
+        if (status) status.remove();
         var avg = rows.reduce(function (n, r) { return n + r.rating; }, 0) / rows.length;
         root.querySelector('.lrv-avg').innerHTML = '<b>' + avg.toFixed(1) + '</b>out of 5 from happy planners';
         root.querySelector('.lrv-grid').innerHTML = rows.slice(0, limit).map(function (r) {
@@ -77,7 +89,7 @@
         }).join('');
         root.hidden = false;
       })
-      .catch(function () {});
+      .catch(function (e) { say('Couldn’t reach Supabase: ' + e.message); });
   })();
 </script>
 
