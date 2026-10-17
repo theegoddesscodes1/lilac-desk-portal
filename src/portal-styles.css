@@ -1642,3 +1642,5 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .tr.tr--cord > .stage-dot { grid-column: 1; grid-row: 3; }
 }
 .copy-of { display: block; margin-top: 2px; font-family: var(--sans); font-size: 11px; letter-spacing: 0.02em; color: #8a867f; }
+.other-order > span:first-child { min-width: 0; }
+.other-need { display: inline-flex; margin-top: 7px; }

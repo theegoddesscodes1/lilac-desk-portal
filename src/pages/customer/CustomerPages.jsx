@@ -8,7 +8,7 @@ import { FileChip, ImageGrid, isImage } from '../../components/FilePreview';
 import { RoundList } from '../../components/ProofRounds';
 import ProofViewer from '../../components/ProofViewer';
 import { pinLines, usePins } from '../../lib/proofPins';
-import { isActive, isDone, shortDate, useCustomer } from '../../lib/portalData';
+import { daysUntil, isActive, isDone, shortDate, useCustomer } from '../../lib/portalData';
 import { signOut } from '../../lib/appVersion';
 import { DeliveryLine, ProgressDots, ProgressHead } from '../../components/Bits';
 import BriefForm from '../../components/BriefForm';
@@ -170,9 +170,25 @@ function nextStep(order, proofCount, base) {
   }
 }
 
+// For the "Also in progress" list: when it's due, and anything waiting on them
+function customerDue(o) {
+  if (!o.due_at) return o.brief_submitted_at ? 'Delivery date coming soon' : 'Delivery date set after your brief';
+  const d = daysUntil(o.due_at);
+  if (d < 0) return `Was due ${shortDate(o.due_at)}`;
+  if (d === 0) return 'Due today';
+  return `Due in ${d} ${d === 1 ? 'day' : 'days'} · ${shortDate(o.due_at)}`;
+}
+
+function needsFrom(o, unread) {
+  if (o.stage === 'order_placed' && !o.brief_submitted_at) return { label: 'Brief needed', action: 'Fill in', path: 'brief' };
+  if (o.stage === 'proof_ready') return { label: 'Proof to review', action: 'Review', path: 'proofs' };
+  if (unread) return { label: 'New message', action: 'Read', path: 'messages' };
+  return null;
+}
+
 export function CustomerHome() {
   const { loading, error, order, files, messages, orderAddons, addons } = useOrder();
-  const { orders, openQuote, contacts, unreadContact } = useCustomer();
+  const { orders, openQuote, contacts, unreadContact, unreadFor } = useCustomer();
   if (loading || error) return <Loading error={error} />;
 
   const base = `/orders/${order.id}`;
@@ -180,7 +196,8 @@ export function CustomerHome() {
   const step = nextStep(order, proofRounds(files).length, base);
   const lastFromKerry = [...messages].reverse().find((m) => m.sender === 'admin');
   const others = orders.filter((o) => o.id !== order.id);
-  const otherActive = others.filter(isActive);
+  // Ones waiting on them first, then soonest due
+  const otherActive = others.filter(isActive).sort((a, b) => Number(Boolean(needsFrom(b, unreadFor(b.id)))) - Number(Boolean(needsFrom(a, unreadFor(a.id)))) || new Date(a.due_at || 8e15) - new Date(b.due_at || 8e15));
   const past = others.filter((o) => isDone(o));
 
   return (
@@ -247,12 +264,19 @@ export function CustomerHome() {
           {otherActive.length > 0 && (
             <div className="home-list">
               <p className="label muted">Also in progress</p>
-              {otherActive.map((o) => (
-                <Link key={o.id} to={`/orders/${o.id}`} className="mini-row">
-                  <span>{plannerLabel(o)}<small>{o.shopify_order_name}</small></span>
-                  <span className="small"><u>Open</u></span>
-                </Link>
-              ))}
+              {otherActive.map((o) => {
+                const need = needsFrom(o, unreadFor(o.id));
+                return (
+                  <Link key={o.id} to={need ? `/orders/${o.id}/${need.path}` : `/orders/${o.id}`} className="mini-row other-order">
+                    <span>
+                      {plannerLabel(o)}
+                      <small>{o.shopify_order_name} · {customerDue(o)}</small>
+                      {need && <span className="otag otag--ox other-need">{need.label}</span>}
+                    </span>
+                    <span className="small"><u>{need ? need.action : 'Open'}</u></span>
+                  </Link>
+                );
+              })}
             </div>
           )}
           {(isDone(order) || past.length > 0) && !otherActive.length && (
