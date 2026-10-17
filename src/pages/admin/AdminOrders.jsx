@@ -1,12 +1,20 @@
 import { stageInfo } from '../../portal-config';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { isActive, isDone, money, shortDate, useAdmin } from '../../lib/portalData';
+import { daysUntil, isActive, isDone, money, shortDate, useAdmin } from '../../lib/portalData';
 import { StageDot } from '../../components/Bits';
 import Icon from '../../components/Icons';
 import FilterMenu from '../../components/FilterMenu';
 import { PRESET_TAGS, TagChips } from '../../components/OrderTags';
-import { shortPlanner } from './AdminHome';
+import { dueText, shortPlanner } from './AdminHome';
+
+// Short due text for the table: "in 4 days", "today", "2 days overdue"; nothing once delivered
+function dueCell(o) {
+  if (!isActive(o)) return { text: '—', loud: false };
+  if (!o.due_at) return { text: o.brief_submitted_at ? 'Set a date' : 'After brief', loud: false, muted: true };
+  const d = daysUntil(o.due_at);
+  return { text: dueText(o).replace('due in ', 'in ').replace('due today', 'today'), loud: d <= 2 };
+}
 
 const STATUS = [
   { key: 'all', label: 'All', test: () => true },
@@ -113,15 +121,19 @@ export default function AdminOrders() {
             {g.label} · <span className="ox">{g.rows.length} {g.rows.length === 1 ? 'order' : 'orders'} · {money(g.rows.reduce((n, o) => n + totalFor(o), 0))}</span>
           </p>
           <div className="table">
-            <div className="tr th"><span>Order</span><span>Customer</span><span>Planner</span><span>Stage</span><span className="hide-phone">Ordered</span><span className="r">Paid</span></div>
+            <div className="tr tr--orders th"><span>Order</span><span>Customer</span><span>Planner</span><span>Stage</span><span>Due</span><span className="hide-phone">Ordered</span><span className="r">Paid</span></div>
             {g.rows.map((o) => {
               const n = addonsByOrder[o.id]?.length ?? 0;
               return (
-                <Link key={o.id} to={`/orders/${o.id}`} className="tr">
+                <Link key={o.id} to={`/orders/${o.id}`} className="tr tr--orders">
                   <span className="num">{o.shopify_order_name}</span>
                   <span>{o.customer_name || o.customer_email}<TagChips tags={tagsByOrder[o.id]} /></span>
                   <span>{shortPlanner(o)}{n ? <span className="muted"> +{n}</span> : null}</span>
                   <StageDot stage={o.stage} />
+                  {(() => {
+                    const due = dueCell(o);
+                    return <span className={`due-cell${due.loud ? ' ox' : ''}${due.muted ? ' muted' : ''}`} title={o.due_at ? shortDate(o.due_at) : ''}>{due.text}</span>;
+                  })()}
                   <span className="hide-phone">{shortDate(o.created_at)}</span>
                   <span className="num r">{money(totalFor(o))}</span>
                 </Link>
