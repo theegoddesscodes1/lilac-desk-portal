@@ -25,7 +25,7 @@ function useContact(id) {
   useEffect(() => {
     reload();
     const channel = supabase
-      .channel(`contact-${id}`)
+      .channel(`contact-${id}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts', filter: `id=eq.${id}` }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_messages', filter: `contact_id=eq.${id}` }, reload)
       .subscribe(onConnected(reload));

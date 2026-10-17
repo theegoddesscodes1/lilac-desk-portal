@@ -1,8 +1,11 @@
+import { useLocation } from 'react-router-dom';
+import ErrorBoundary from './ErrorBoundary';
 import { Link, NavLink } from 'react-router-dom';
 import Icon from './Icons';
 
 // Sidebar on desktop and iPad, bottom bar on phones. Same items in both.
 export default function Shell({ items, sub, footer, topRight, sideTop, children }) {
+  const location = useLocation();
   return (
     <div className="app">
       <aside className="side">
@@ -29,7 +32,7 @@ export default function Shell({ items, sub, footer, topRight, sideTop, children 
         <div className="ptop-right">{topRight}</div>
       </header>
 
-      <div className="app-main">{children}</div>
+      <div className="app-main"><ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary></div>
 
       <nav className="bnav" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }} aria-label="Main">
         {items.map((item) => (

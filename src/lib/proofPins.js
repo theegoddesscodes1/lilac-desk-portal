@@ -14,7 +14,7 @@ export function usePins(orderId) {
     if (!orderId) return undefined;
     reload();
     const channel = supabase
-      .channel(`pins-${orderId}`)
+      .channel(`pins-${orderId}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'proof_pins', filter: `order_id=eq.${orderId}` }, reload)
       .subscribe();
     return () => supabase.removeChannel(channel);

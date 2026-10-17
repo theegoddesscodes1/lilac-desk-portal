@@ -109,7 +109,7 @@ export function OrderNotes({ orderId }) {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel(`notes-${orderId}`)
+      .channel(`notes-${orderId}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_notes', filter: `order_id=eq.${orderId}` }, load)
       .subscribe();
     return () => supabase.removeChannel(channel);

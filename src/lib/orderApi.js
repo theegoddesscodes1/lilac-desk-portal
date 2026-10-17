@@ -182,7 +182,7 @@ export function useOrderData(orderId) {
   useEffect(() => {
     reload();
     const channel = supabase
-      .channel(`order-${orderId}`)
+      .channel(`order-${orderId}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `order_id=eq.${orderId}` }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'files', filter: `order_id=eq.${orderId}` }, reload)

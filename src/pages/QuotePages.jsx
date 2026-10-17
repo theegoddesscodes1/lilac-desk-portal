@@ -27,7 +27,7 @@ function useQuote(id) {
   useEffect(() => {
     reload();
     const channel = supabase
-      .channel(`quote-${id}`)
+      .channel(`quote-${id}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes', filter: `id=eq.${id}` }, reload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_messages', filter: `quote_id=eq.${id}` }, reload)
       .subscribe(onConnected(reload));
