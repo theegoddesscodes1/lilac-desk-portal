@@ -19,20 +19,20 @@
   #lcp-{{ sid }} .lcp-media img, #lcp-{{ sid }} .lcp-media svg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
   #lcp-{{ sid }} .lcp-tag { position: absolute; left: 28px; bottom: 26px; background: var(--w); padding: 10px 16px; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; }
   #lcp-{{ sid }} .lcp-tag b { font-weight: 400; color: var(--o); }
-  #lcp-{{ sid }} .lcp-body { padding: clamp(40px, 6vw, 88px) clamp(28px, 5vw, 80px); display: flex; flex-direction: column; justify-content: center; }
-  #lcp-{{ sid }} .lcp-label { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--c); padding-top: 10px; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 34px; }
+  #lcp-{{ sid }} .lcp-body { padding: clamp(32px, 4vw, 56px) clamp(28px, 5vw, 80px); display: flex; flex-direction: column; justify-content: center; }
+  #lcp-{{ sid }} .lcp-label { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--c); padding-top: 10px; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 26px; }
   #lcp-{{ sid }} .lcp-label span:last-child { color: var(--o); text-align: right; }
   #lcp-{{ sid }} h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 3vw, 42px); line-height: 1.08; margin: 0; letter-spacing: 0; text-transform: none; color: var(--c); }
   #lcp-{{ sid }} h2 em { color: var(--o); }
   #lcp-{{ sid }} .lcp-lead { margin-top: 20px; font-size: 16px; line-height: 1.75; max-width: 460px; color: #4a4744; }
-  #lcp-{{ sid }} .lcp-opts { margin-top: 30px; border-top: 1px solid var(--g); }
+  #lcp-{{ sid }} .lcp-opts { margin-top: 24px; border-top: 1px solid var(--g); }
   #lcp-{{ sid }} .lcp-opt { display: grid; grid-template-columns: 130px 1fr auto; gap: 18px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--g); text-decoration: none; color: inherit; transition: color .2s; }
   #lcp-{{ sid }} a.lcp-opt:hover span { color: var(--o); }
   #lcp-{{ sid }} .lcp-opt small { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--o); }
   #lcp-{{ sid }} .lcp-opt span { font-size: 15px; line-height: 1.6; color: #4a4744; }
   #lcp-{{ sid }} .lcp-opt b { font-family: var(--serif); font-weight: 400; font-size: 17px; white-space: nowrap; }
   #lcp-{{ sid }} .lcp-opt b i { font-family: var(--sans); font-style: normal; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #4a4744; margin-right: 6px; }
-  #lcp-{{ sid }} .lcp-acts { display: flex; align-items: center; gap: 22px; margin-top: 30px; flex-wrap: wrap; }
+  #lcp-{{ sid }} .lcp-acts { display: flex; align-items: center; gap: 22px; margin-top: 24px; flex-wrap: wrap; }
   #lcp-{{ sid }} .lcp-btn { display: inline-block; background: var(--c); color: var(--w); padding: 17px 32px; font-size: 12px; letter-spacing: .22em; text-transform: uppercase; text-decoration: none; border: 0; border-radius: 0; transition: background .2s; }
   #lcp-{{ sid }} .lcp-btn:hover { background: var(--o); color: var(--w); }
   #lcp-{{ sid }} .lcp-link { font-size: 14px; letter-spacing: .04em; color: var(--c); text-decoration: underline; text-underline-offset: 3px; }
@@ -44,7 +44,7 @@
   @media (max-width: 800px) {
     #lcp-{{ sid }} .lcp-grid { grid-template-columns: 1fr; min-height: 0; }
     #lcp-{{ sid }}.lcp--right .lcp-media { order: 0; }
-    #lcp-{{ sid }} .lcp-media { aspect-ratio: 4 / 3; }
+    #lcp-{{ sid }} .lcp-media { aspect-ratio: 3 / 2; }
     #lcp-{{ sid }} .lcp-tag { left: 16px; bottom: 16px; }
     #lcp-{{ sid }} .lcp-body { padding: 34px 20px 38px; }
     #lcp-{{ sid }} .lcp-label { margin-bottom: 24px; }
@@ -116,7 +116,7 @@
     { "type": "header", "content": "Photo" },
     { "type": "image_picker", "id": "image", "label": "Photo" },
     { "type": "select", "id": "image_side", "label": "Photo side", "default": "left", "options": [ { "value": "left", "label": "Left" }, { "value": "right", "label": "Right" } ] },
-    { "type": "range", "id": "height", "label": "Minimum height on desktop", "min": 460, "max": 820, "step": 20, "unit": "px", "default": 620 },
+    { "type": "range", "id": "height", "label": "Minimum height on desktop", "min": 380, "max": 820, "step": 20, "unit": "px", "default": 500 },
     { "type": "text", "id": "tag_bold", "label": "Photo tag (oxblood)", "default": "Now open" },
     { "type": "text", "id": "tag_text", "label": "Photo tag (rest)", "default": "Made to order" },
 
