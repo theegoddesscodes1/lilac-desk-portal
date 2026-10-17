@@ -166,7 +166,7 @@ export function AdminCustomer() {
               const rv = reviews.find((r) => r.order_id === o.id);
               return (
               <Link key={o.id} to={`/orders/${o.id}`} className="tr tr--cord">
-                <span className="num">{o.shopify_order_name}</span>
+                <span className="num">{o.shopify_order_number ?? o.shopify_order_name}{o.shopify_order_number && <small className="copy-of">{o.shopify_order_name.split(' · ')[1]}</small>}</span>
                 <span>{shortPlanner(o)}{addonsByOrder[o.id]?.length ? <span className="muted"> + {addonsByOrder[o.id].map((a) => a.name.toLowerCase()).join(', ')}</span> : null}</span>
                 <StageDot stage={o.stage} />
                 <span className="rev-cell">{rv ? <Stars value={rv.rating} size={12} /> : null}</span>

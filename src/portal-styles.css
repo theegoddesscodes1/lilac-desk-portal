@@ -1641,3 +1641,4 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
   .tr.tr--cord > .rev-cell { grid-column: 2; grid-row: 3; text-align: right; }
   .tr.tr--cord > .stage-dot { grid-column: 1; grid-row: 3; }
 }
+.copy-of { display: block; margin-top: 2px; font-family: var(--sans); font-size: 11px; letter-spacing: 0.02em; color: #8a867f; }

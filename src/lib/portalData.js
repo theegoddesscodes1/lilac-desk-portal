@@ -1,7 +1,7 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { ACTIVE_STAGES, DONE_STAGES } from '../portal-config';
-import { keepFresh, onConnected } from './orderApi';
+import { keepFresh, labelCopies, onConnected } from './orderApi';
 import { mergeSettings } from './studioSettings';
 
 // ---------- money and dates ----------
@@ -113,7 +113,7 @@ export function AdminDataProvider({ children }) {
       contactMessages: contactMessages.data ?? [],
       quotes: quotes.data ?? [],
       quoteMessages: quoteMessages.data ?? [],
-      orders: orders.data ?? [],
+      orders: labelCopies(orders.data ?? []),
       orderAddons: orderAddons.data ?? [],
       messages: messages.data ?? [],
       profiles: profiles.data ?? [],
@@ -346,7 +346,7 @@ export function CustomerDataProvider({ email, children }) {
     ]);
     setState({
       loading: false,
-      orders: orders.data ?? [],
+      orders: labelCopies(orders.data ?? []),
       messages: messages.data ?? [],
       profile: profile.data ?? null,
       quotes: quotes.data ?? [],

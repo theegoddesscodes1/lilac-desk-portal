@@ -154,7 +154,7 @@ export default function AdminOrder() {
       {Number(order.refunded_amount) > 0 && (
         <div className="paybox-row ox"><span>Refunded {shortDate(order.refunded_at)}</span><span className="num">−{money(order.refunded_amount)}</span></div>
       )}
-      <div className="paybox-row muted small"><span>Paid {formatDate(order.created_at)} · Shopify {order.shopify_order_name}</span></div>
+      <div className="paybox-row muted small"><span>Paid {formatDate(order.created_at)} · Shopify {order.shopify_order_number ?? order.shopify_order_name}</span></div>
     </div>
   );
 

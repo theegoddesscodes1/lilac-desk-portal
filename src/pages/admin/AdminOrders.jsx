@@ -128,7 +128,7 @@ export default function AdminOrders() {
               const n = addonsByOrder[o.id]?.length ?? 0;
               return (
                 <Link key={o.id} to={`/orders/${o.id}`} className="tr tr--orders">
-                  <span className="num">{o.shopify_order_name}</span>
+                  <span className="num">{o.shopify_order_number ?? o.shopify_order_name}{o.shopify_order_number && <small className="copy-of">{o.shopify_order_name.split(' · ')[1]}</small>}</span>
                   <span>{o.customer_name || o.customer_email}<TagChips tags={tagsByOrder[o.id]} /></span>
                   <span>{shortPlanner(o)}{n ? <span className="muted"> +{n}</span> : null}</span>
                   <StageDot stage={o.stage} />

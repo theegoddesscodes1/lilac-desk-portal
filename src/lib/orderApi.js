@@ -1,6 +1,37 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
+// Several planners bought in one checkout share a Shopify order number.
+// Tell them apart on screen: "#1046 · 1 of 2", "#1046 · 2 of 2".
+const copyOrder = (a, b) =>
+  String(a.shopify_line_item_id ?? '').localeCompare(String(b.shopify_line_item_id ?? ''), undefined, { numeric: true }) ||
+  (a.copy_index ?? 0) - (b.copy_index ?? 0) ||
+  String(a.id).localeCompare(String(b.id));
+
+export function labelCopies(orders = []) {
+  const groups = new Map();
+  for (const o of orders) {
+    const key = o.shopify_order_id ?? o.shopify_order_name;
+    if (!key) continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(o);
+  }
+  const labels = new Map();
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    [...list].sort(copyOrder).forEach((o, i) => labels.set(o.id, `${o.shopify_order_name} · ${i + 1} of ${list.length}`));
+  }
+  return orders.map((o) => (labels.has(o.id) ? { ...o, shopify_order_number: o.shopify_order_name, shopify_order_name: labels.get(o.id) } : o));
+}
+
+async function labelOne(order) {
+  if (!order?.shopify_order_id) return order;
+  const { data } = await supabase.from('orders').select('id, shopify_order_id, shopify_order_name, shopify_line_item_id, copy_index').eq('shopify_order_id', order.shopify_order_id);
+  if (!data || data.length < 2) return order;
+  const labelled = labelCopies(data).find((o) => o.id === order.id);
+  return labelled ? { ...order, shopify_order_number: order.shopify_order_name, shopify_order_name: labelled.shopify_order_name } : order;
+}
+
 const BUCKET = 'order-files';
 
 export const isImage = (file) => /\.(png|jpe?g|gif|webp|heic|avif|svg)$/i.test(file?.name || file?.path || '');
@@ -171,7 +202,7 @@ export function useOrderData(orderId) {
     setState({
       loading: false,
       error: firstError ? errorText(firstError) : !order.data ? 'This order could not be found.' : null,
-      order: order.data,
+      order: await labelOne(order.data),
       files: files.data ?? [],
       messages: messages.data ?? [],
       orderAddons: orderAddons.data ?? [],
