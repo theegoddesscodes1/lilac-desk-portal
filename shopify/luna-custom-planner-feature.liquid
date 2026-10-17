@@ -1,0 +1,159 @@
+{%- comment -%}
+  Luna Custom Planner Feature: promotes custom planners on the home page.
+  Photo on one side, headline, personal and commercial options, button, and a strip of three facts.
+  Everything is editable in the theme editor.
+{%- endcomment -%}
+{%- assign sid = section.id -%}
+
+<style>
+  #lcp-{{ sid }} {
+    --c: #333333; --w: #FAFAF8; --l: #D6D0DE; --o: #5C181E; --g: #D5D2CC;
+    --serif: 'Times New Roman', Times, serif; --sans: 'Jost', sans-serif;
+    background: var(--w); color: var(--c); font-family: var(--sans); font-weight: 300;
+  }
+  #lcp-{{ sid }} *, #lcp-{{ sid }} *::before, #lcp-{{ sid }} *::after { box-sizing: border-box; }
+  #lcp-{{ sid }} p { margin: 0; }
+  #lcp-{{ sid }} .lcp-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); min-height: {{ section.settings.height }}px; }
+  #lcp-{{ sid }}.lcp--right .lcp-media { order: 2; }
+  #lcp-{{ sid }} .lcp-media { position: relative; overflow: hidden; background: var(--g); }
+  #lcp-{{ sid }} .lcp-media img, #lcp-{{ sid }} .lcp-media svg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  #lcp-{{ sid }} .lcp-tag { position: absolute; left: 28px; bottom: 26px; background: var(--w); padding: 9px 14px; font-size: 10px; letter-spacing: .22em; text-transform: uppercase; }
+  #lcp-{{ sid }} .lcp-tag b { font-weight: 400; color: var(--o); }
+  #lcp-{{ sid }} .lcp-body { padding: clamp(40px, 6vw, 88px) clamp(28px, 5vw, 80px); display: flex; flex-direction: column; justify-content: center; }
+  #lcp-{{ sid }} .lcp-label { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--c); padding-top: 9px; font-size: 10px; letter-spacing: .24em; text-transform: uppercase; margin-bottom: 34px; }
+  #lcp-{{ sid }} .lcp-label span:last-child { color: var(--o); text-align: right; }
+  #lcp-{{ sid }} h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 3vw, 42px); line-height: 1.08; margin: 0; letter-spacing: 0; text-transform: none; color: var(--c); }
+  #lcp-{{ sid }} h2 em { color: var(--o); }
+  #lcp-{{ sid }} .lcp-lead { margin-top: 18px; font-size: 15px; line-height: 1.75; max-width: 440px; }
+  #lcp-{{ sid }} .lcp-opts { margin-top: 30px; border-top: 1px solid var(--g); }
+  #lcp-{{ sid }} .lcp-opt { display: grid; grid-template-columns: 120px 1fr auto; gap: 18px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--g); text-decoration: none; color: inherit; transition: color .2s; }
+  #lcp-{{ sid }} a.lcp-opt:hover span { color: var(--o); }
+  #lcp-{{ sid }} .lcp-opt small { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--o); }
+  #lcp-{{ sid }} .lcp-opt span { font-size: 13.5px; line-height: 1.55; }
+  #lcp-{{ sid }} .lcp-opt b { font-family: var(--serif); font-weight: 400; font-size: 15px; white-space: nowrap; }
+  #lcp-{{ sid }} .lcp-opt b i { font-family: var(--sans); font-style: normal; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #8a867f; margin-right: 6px; }
+  #lcp-{{ sid }} .lcp-acts { display: flex; align-items: center; gap: 22px; margin-top: 30px; flex-wrap: wrap; }
+  #lcp-{{ sid }} .lcp-btn { display: inline-block; background: var(--c); color: var(--w); padding: 16px 30px; font-size: 11px; letter-spacing: .24em; text-transform: uppercase; text-decoration: none; border: 0; border-radius: 0; transition: background .2s; }
+  #lcp-{{ sid }} .lcp-btn:hover { background: var(--o); color: var(--w); }
+  #lcp-{{ sid }} .lcp-link { font-size: 12px; letter-spacing: .06em; color: var(--c); text-decoration: underline; text-underline-offset: 3px; }
+  #lcp-{{ sid }} .lcp-link:hover { color: var(--o); }
+  #lcp-{{ sid }} .lcp-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--c); }
+  #lcp-{{ sid }} .lcp-facts div { padding: 16px clamp(20px, 3vw, 40px); font-size: 12.5px; line-height: 1.5; }
+  #lcp-{{ sid }} .lcp-facts div + div { border-left: 1px solid var(--g); }
+  #lcp-{{ sid }} .lcp-facts small { display: block; font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: #8a867f; margin-bottom: 4px; }
+  @media (max-width: 800px) {
+    #lcp-{{ sid }} .lcp-grid { grid-template-columns: 1fr; min-height: 0; }
+    #lcp-{{ sid }}.lcp--right .lcp-media { order: 0; }
+    #lcp-{{ sid }} .lcp-media { aspect-ratio: 4 / 3; }
+    #lcp-{{ sid }} .lcp-tag { left: 16px; bottom: 16px; }
+    #lcp-{{ sid }} .lcp-body { padding: 34px 20px 38px; }
+    #lcp-{{ sid }} .lcp-label { margin-bottom: 24px; }
+    #lcp-{{ sid }} .lcp-opt { grid-template-columns: 1fr auto; gap: 4px 14px; }
+    #lcp-{{ sid }} .lcp-opt small { grid-column: 1 / -1; }
+    #lcp-{{ sid }} .lcp-facts { grid-template-columns: 1fr; }
+    #lcp-{{ sid }} .lcp-facts div { padding: 14px 20px; }
+    #lcp-{{ sid }} .lcp-facts div + div { border-left: 0; border-top: 1px solid var(--g); }
+  }
+</style>
+
+<section id="lcp-{{ sid }}" class="lcp{% if section.settings.image_side == 'right' %} lcp--right{% endif %}">
+  <div class="lcp-grid">
+    <div class="lcp-media">
+      {%- if section.settings.image != blank -%}
+        {%- assign lcp_alt = section.settings.image.alt | default: 'A custom Lilac Desk planner' -%}
+        {{ section.settings.image | image_url: width: 1800 | image_tag: loading: 'lazy', widths: '600, 900, 1200, 1800', sizes: '(max-width: 800px) 100vw, 55vw', alt: lcp_alt }}
+      {%- else -%}
+        {{ 'lifestyle-1' | placeholder_svg_tag }}
+      {%- endif -%}
+      {%- if section.settings.tag_bold != blank or section.settings.tag_text != blank -%}
+        <p class="lcp-tag"><b>{{ section.settings.tag_bold }}</b>{% if section.settings.tag_bold != blank and section.settings.tag_text != blank %} · {% endif %}{{ section.settings.tag_text }}</p>
+      {%- endif -%}
+    </div>
+
+    <div class="lcp-body">
+      <p class="lcp-label"><span>{{ section.settings.label_left }}</span><span>{{ section.settings.label_right }}</span></p>
+      <h2>{{ section.settings.heading }}{% if section.settings.heading_italic != blank %}<br><em>{{ section.settings.heading_italic }}</em>{% endif %}</h2>
+      {%- if section.settings.text != blank -%}<p class="lcp-lead">{{ section.settings.text }}</p>{%- endif -%}
+
+      <div class="lcp-opts">
+        {%- for i in (1..2) -%}
+          {%- if i == 1 -%}
+            {%- assign o_title = section.settings.opt1_title -%}{%- assign o_text = section.settings.opt1_text -%}{%- assign o_price = section.settings.opt1_price -%}{%- assign o_link = section.settings.opt1_link -%}
+          {%- else -%}
+            {%- assign o_title = section.settings.opt2_title -%}{%- assign o_text = section.settings.opt2_text -%}{%- assign o_price = section.settings.opt2_price -%}{%- assign o_link = section.settings.opt2_link -%}
+          {%- endif -%}
+          {%- if o_title != blank -%}
+            {%- if o_link != blank -%}<a class="lcp-opt" href="{{ o_link }}">{%- else -%}<div class="lcp-opt">{%- endif -%}
+              <small>{{ o_title }}</small>
+              <span>{{ o_text }}</span>
+              {%- if o_price != blank -%}<b><i>From</i>{{ o_price }}</b>{%- endif -%}
+            {%- if o_link != blank -%}</a>{%- else -%}</div>{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      <div class="lcp-acts">
+        {%- if section.settings.button_label != blank -%}<a class="lcp-btn" href="{{ section.settings.button_link }}">{{ section.settings.button_label }}</a>{%- endif -%}
+        {%- if section.settings.link_label != blank -%}<a class="lcp-link" href="{{ section.settings.link_url }}">{{ section.settings.link_label }}</a>{%- endif -%}
+      </div>
+    </div>
+  </div>
+
+  {%- if section.settings.show_facts -%}
+    <div class="lcp-facts">
+      <div><small>{{ section.settings.fact1_title }}</small>{{ section.settings.fact1_text }}</div>
+      <div><small>{{ section.settings.fact2_title }}</small>{{ section.settings.fact2_text }}</div>
+      <div><small>{{ section.settings.fact3_title }}</small>{{ section.settings.fact3_text }}</div>
+    </div>
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "Luna Custom Planners",
+  "tag": "div",
+  "settings": [
+    { "type": "header", "content": "Photo" },
+    { "type": "image_picker", "id": "image", "label": "Photo" },
+    { "type": "select", "id": "image_side", "label": "Photo side", "default": "left", "options": [ { "value": "left", "label": "Left" }, { "value": "right", "label": "Right" } ] },
+    { "type": "range", "id": "height", "label": "Minimum height on desktop", "min": 460, "max": 820, "step": 20, "unit": "px", "default": 620 },
+    { "type": "text", "id": "tag_bold", "label": "Photo tag (oxblood)", "default": "Now open" },
+    { "type": "text", "id": "tag_text", "label": "Photo tag (rest)", "default": "Made to order" },
+
+    { "type": "header", "content": "Text" },
+    { "type": "text", "id": "label_left", "label": "Small label, left", "default": "Custom planners" },
+    { "type": "text", "id": "label_right", "label": "Small label, right", "default": "Personal · Commercial" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "A planner made for" },
+    { "type": "text", "id": "heading_italic", "label": "Heading, italic line", "default": "the way you plan." },
+    { "type": "textarea", "id": "text", "label": "Paragraph", "default": "Tell me how you plan, and I'll design your planner around it: your pages, your layout, your colors, tabless or tabbed." },
+
+    { "type": "header", "content": "Personal" },
+    { "type": "text", "id": "opt1_title", "label": "Label", "default": "Personal" },
+    { "type": "text", "id": "opt1_text", "label": "Description", "default": "For you, or a gift for someone you love." },
+    { "type": "text", "id": "opt1_price", "label": "Starting price", "default": "$30" },
+    { "type": "text", "id": "opt1_link", "label": "Link", "default": "/pages/custom-planners" },
+
+    { "type": "header", "content": "Commercial" },
+    { "type": "text", "id": "opt2_title", "label": "Label", "default": "Commercial" },
+    { "type": "text", "id": "opt2_text", "label": "Description", "default": "Designed exclusively for you to sell or share with clients." },
+    { "type": "text", "id": "opt2_price", "label": "Starting price", "default": "$60" },
+    { "type": "text", "id": "opt2_link", "label": "Link", "default": "/pages/custom-planners" },
+
+    { "type": "header", "content": "Buttons" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Design your planner" },
+    { "type": "text", "id": "button_link", "label": "Button link", "default": "/pages/custom-planners" },
+    { "type": "text", "id": "link_label", "label": "Second link label", "default": "Have something custom in mind? Ask me" },
+    { "type": "text", "id": "link_url", "label": "Second link", "default": "/pages/contact" },
+
+    { "type": "header", "content": "Facts strip" },
+    { "type": "checkbox", "id": "show_facts", "label": "Show the facts strip", "default": true },
+    { "type": "text", "id": "fact1_title", "label": "Fact 1 label", "default": "Your app" },
+    { "type": "text", "id": "fact1_text", "label": "Fact 1", "default": "GoodNotes, Notability, Samsung Notes and more" },
+    { "type": "text", "id": "fact2_title", "label": "Fact 2 label", "default": "Your order" },
+    { "type": "text", "id": "fact2_text", "label": "Fact 2", "default": "A private portal for your brief, proofs and messages" },
+    { "type": "text", "id": "fact3_title", "label": "Fact 3 label", "default": "Delivery" },
+    { "type": "text", "id": "fact3_text", "label": "Fact 3", "default": "From 7 days, with a live countdown" }
+  ],
+  "presets": [{ "name": "Luna Custom Planners" }]
+}
+{% endschema %}
