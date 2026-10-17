@@ -1,257 +1,242 @@
 {%- comment -%}
-  Luna Custom Planners (home page). Built on the same layout and styles as the Luna Resource Showcase:
-  a small text panel on the left, up to three cards on the right (personal, commercial, fully custom).
+  Luna Custom Planner Feature: promotes custom planners on the home page.
+  Photo on one side, headline, personal and commercial options, and a button.
+  Everything is editable in the theme editor.
 {%- endcomment -%}
-<div class="luna-cpf-section">
-  <div class="luna-cpf-grid">
+{%- assign sid = section.id -%}
 
-    <div class="luna-cpf-text-panel">
-      <div class="luna-cpf-inner-contain">
-        {%- if section.settings.micro_tag != blank -%}
-          <span class="luna-cpf-micro-tag">// {{ section.settings.micro_tag | upcase }}</span>
-        {%- endif -%}
-        {%- if section.settings.heading_text != blank -%}
-          <h2 class="luna-cpf-heading">{{ section.settings.heading_text | upcase }}</h2>
-        {%- endif -%}
-        {%- if section.settings.desc_text != blank -%}
-          <p class="luna-cpf-desc">{{ section.settings.desc_text }}</p>
-        {%- endif -%}
-        {%- if section.settings.btn_label != blank -%}
-          <a href="{{ section.settings.btn_link | default: '/pages/custom-planners' }}" class="luna-cpf-inline-btn">{{ section.settings.btn_label | upcase }}</a>
-        {%- endif -%}
-      </div>
+<style>
+  #lcp-{{ sid }} { background: #FAFAF8; color: #333333; border-bottom: 1px solid #D5D2CC; }
+  #lcp-{{ sid }}, #lcp-{{ sid }} * { box-sizing: border-box; }
+  #lcp-{{ sid }} p { margin: 0; }
+  #lcp-{{ sid }} .lcp-in { max-width: 1300px; margin: 0 auto; padding: 60px 4.5%; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; }
+  #lcp-{{ sid }}.lcp--right .lcp-in { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  #lcp-{{ sid }}.lcp--right .lcp-media { order: 2; }
+  #lcp-{{ sid }} .lcp-media { position: relative; aspect-ratio: 4 / 3; border: 1px solid #D5D2CC; overflow: hidden; background: #FAFAF8; }
+  #lcp-{{ sid }} .lcp-media img, #lcp-{{ sid }} .lcp-media svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #lcp-{{ sid }} .lcp-tag { position: absolute; left: 10px; top: 10px; background: #FAFAF8; color: #5C181E; padding: 5px 9px; font-family: 'Jost', sans-serif; font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; }
+  #lcp-{{ sid }} .lcp-body { max-width: 560px; }
+  #lcp-{{ sid }} .lcp-micro { display: block; font-family: 'Jost', sans-serif; font-size: 9px; font-weight: 500; letter-spacing: 2.5px; color: #5C181E; text-transform: uppercase; margin-bottom: 12px; }
+  #lcp-{{ sid }} .lcp-heading { font-family: 'Times New Roman', Times, serif; font-size: 14px; font-weight: 400; letter-spacing: 2px; color: #333333; text-transform: uppercase; line-height: 1.35; margin: 0 0 14px; }
+  #lcp-{{ sid }} .lcp-desc { font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 400; line-height: 1.65; letter-spacing: 0.1px; color: #666666; margin: 0 0 18px; }
+  #lcp-{{ sid }} .lcp-opts { border-top: 1px solid #D5D2CC; margin-bottom: 24px; }
+  #lcp-{{ sid }} .lcp-opt { display: grid; grid-template-columns: 130px 1fr auto; gap: 14px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #D5D2CC; text-decoration: none; color: #333333; }
+  #lcp-{{ sid }} .lcp-opt small { font-family: 'Jost', sans-serif; font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: #333333; }
+  #lcp-{{ sid }} .lcp-opt small em { font-style: normal; color: #5C181E; margin-right: 4px; }
+  #lcp-{{ sid }} .lcp-opt span { font-family: 'Jost', sans-serif; font-size: 11px; line-height: 1.6; color: #666666; transition: color .2s ease; }
+  #lcp-{{ sid }} a.lcp-opt:hover span { color: #333333; }
+  #lcp-{{ sid }} .lcp-opt b { font-family: 'Jost', sans-serif; font-size: 9px; font-weight: 500; letter-spacing: 0.5px; color: #333333; white-space: nowrap; text-transform: uppercase; }
+  #lcp-{{ sid }} .lcp-acts { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  #lcp-{{ sid }} .lcp-btn, #lcp-{{ sid }} .lcp-link { display: inline-block; font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none; padding-bottom: 2px; transition: opacity 0.2s ease; }
+  #lcp-{{ sid }} .lcp-btn { color: #5C181E; border-bottom: 1px solid #5C181E; }
+  #lcp-{{ sid }} .lcp-link { color: #333333; border-bottom: 1px solid #D5D2CC; }
+  #lcp-{{ sid }} .lcp-btn:hover, #lcp-{{ sid }} .lcp-link:hover { opacity: 0.7; }
+  @media (max-width: 768px) {
+    #lcp-{{ sid }} .lcp-in, #lcp-{{ sid }}.lcp--right .lcp-in { grid-template-columns: 1fr; gap: 28px; padding: 50px 20px; }
+    #lcp-{{ sid }}.lcp--right .lcp-media { order: 0; }
+    #lcp-{{ sid }} .lcp-media { aspect-ratio: 16 / 10; }
+    #lcp-{{ sid }} .lcp-opt { grid-template-columns: 1fr auto; gap: 2px 14px; }
+    #lcp-{{ sid }} .lcp-opt small { grid-column: 1 / -1; }
+  }
+</style>
+
+<section id="lcp-{{ sid }}" class="lcp{% if section.settings.image_side == 'right' %} lcp--right{% endif %}">
+  <div class="lcp-in">
+    <div class="lcp-media">
+      {%- if section.settings.image != blank -%}
+        {%- assign lcp_alt = section.settings.image.alt | default: 'A custom Lilac Desk planner' -%}
+        {{ section.settings.image | image_url: width: 1800 | image_tag: loading: 'lazy', widths: '600, 900, 1200, 1800', sizes: '(max-width: 800px) 100vw, 40vw', alt: lcp_alt }}
+      {%- else -%}
+        {{ 'lifestyle-1' | placeholder_svg_tag }}
+      {%- endif -%}
+      {%- if section.settings.tag_bold != blank or section.settings.tag_text != blank -%}
+        <p class="lcp-tag">{{ section.settings.tag_bold }}{% if section.settings.tag_bold != blank and section.settings.tag_text != blank %} · {% endif %}{{ section.settings.tag_text }}</p>
+      {%- endif -%}
     </div>
 
-    <div class="luna-cpf-gallery-panel">
-      <div class="luna-cpf-matrix">
-        {%- for block in section.blocks -%}
-          <div class="luna-cpf-item" {{ block.shopify_attributes }}>
-            <a href="{{ block.settings.link | default: '/pages/custom-planners' }}" class="luna-cpf-anchor">
-              <div class="luna-cpf-viewport">
-                {%- if block.settings.image != blank -%}
-                  <img src="{{ block.settings.image | image_url: width: 600 }}" alt="{{ block.settings.title | escape }}" loading="lazy" width="{{ block.settings.image.width }}" height="{{ block.settings.image.height }}">
-                {%- else -%}
-                  <div class="luna-cpf-empty">{{ 'product-apparel-' | append: forloop.index | placeholder_svg_tag }}</div>
-                {%- endif -%}
-                {%- if block.settings.badge != blank -%}<span class="luna-cpf-badge">{{ block.settings.badge | upcase }}</span>{%- endif -%}
-              </div>
-              <div class="luna-cpf-meta-lines">
-                <span class="luna-cpf-title">{{ block.settings.title | upcase }}</span>
-                <span class="luna-cpf-price">{{ block.settings.price }}</span>
-              </div>
-              {%- if block.settings.note != blank -%}<span class="luna-cpf-note">{{ block.settings.note }}</span>{%- endif -%}
-            </a>
-          </div>
+    <div class="lcp-body">
+      {%- if section.settings.micro_tag != blank -%}<span class="lcp-micro">// {{ section.settings.micro_tag }}</span>{%- endif -%}
+      {%- if section.settings.heading != blank -%}<h2 class="lcp-heading">{{ section.settings.heading }}</h2>{%- endif -%}
+      {%- if section.settings.text != blank -%}<p class="lcp-desc">{{ section.settings.text }}</p>{%- endif -%}
+
+      <div class="lcp-opts">
+        {%- for i in (1..2) -%}
+          {%- if i == 1 -%}
+            {%- assign o_title = section.settings.opt1_title -%}{%- assign o_text = section.settings.opt1_text -%}{%- assign o_price = section.settings.opt1_price -%}{%- assign o_link = section.settings.opt1_link -%}
+          {%- else -%}
+            {%- assign o_title = section.settings.opt2_title -%}{%- assign o_text = section.settings.opt2_text -%}{%- assign o_price = section.settings.opt2_price -%}{%- assign o_link = section.settings.opt2_link -%}
+          {%- endif -%}
+          {%- if o_title != blank -%}
+            {%- if o_link != blank -%}<a class="lcp-opt" href="{{ o_link }}">{%- else -%}<div class="lcp-opt">{%- endif -%}
+              <small><em>0{{ i }} //</em>{{ o_title }}</small>
+              <span>{{ o_text }}</span>
+              {%- if o_price != blank -%}<b>From {{ o_price }}</b>{%- endif -%}
+            {%- if o_link != blank -%}</a>{%- else -%}</div>{%- endif -%}
+          {%- endif -%}
         {%- endfor -%}
       </div>
+
+      <div class="lcp-acts">
+        {%- if section.settings.button_label != blank -%}<a class="lcp-btn" href="{{ section.settings.button_link }}">{{ section.settings.button_label }}</a>{%- endif -%}
+        {%- if section.settings.link_label != blank -%}<a class="lcp-link" href="{{ section.settings.link_url }}">{{ section.settings.link_label }}</a>{%- endif -%}
+      </div>
     </div>
-
   </div>
-</div>
 
-{% style %}
-.luna-cpf-section, .luna-cpf-section * {
-  box-sizing: border-box !important;
-  margin: 0;
-  padding: 0;
-}
-.luna-cpf-section {
-  width: 100% !important;
-  max-width: 100% !important;
-  background-color: #FAFAF8 !important;
-  padding: 60px 4.5% !important;
-  overflow: hidden;
-  border-bottom: 1px solid #D5D2CC;
-  display: block !important;
-}
-.luna-cpf-grid {
-  display: grid !important;
-  grid-template-columns: 0.8fr 1.2fr !important;
-  align-items: center !important;
-  gap: 48px !important;
-  max-width: 1300px !important;
-  margin: 0 auto !important;
-  height: auto !important;
-}
-.luna-cpf-text-panel { display: flex !important; justify-content: flex-start !important; }
-.luna-cpf-inner-contain { width: 100% !important; max-width: 360px !important; }
-.luna-cpf-micro-tag {
-  font-family: 'Jost', sans-serif !important;
-  font-size: 9px !important;
-  font-weight: 500 !important;
-  letter-spacing: 2.5px !important;
-  color: #5C181E !important;
-  display: block !important;
-  margin-bottom: 12px !important;
-}
-.luna-cpf-heading {
-  font-family: 'Times New Roman', Times, serif !important;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  letter-spacing: 2px !important;
-  color: #333333 !important;
-  margin: 0 0 14px 0 !important;
-  line-height: 1.35 !important;
-}
-.luna-cpf-desc {
-  font-family: 'Jost', sans-serif !important;
-  font-size: 11px !important;
-  font-weight: 400 !important;
-  line-height: 1.65 !important;
-  color: #666666 !important;
-  margin: 0 0 24px 0 !important;
-  letter-spacing: 0.1px !important;
-}
-.luna-cpf-inline-btn {
-  display: inline-block !important;
-  color: #5C181E !important;
-  font-family: 'Jost', sans-serif !important;
-  font-size: 10px !important;
-  font-weight: 500 !important;
-  letter-spacing: 1.5px !important;
-  text-decoration: none !important;
-  text-transform: uppercase !important;
-  border-bottom: 1px solid #5C181E !important;
-  padding-bottom: 2px !important;
-  transition: opacity 0.2s ease !important;
-}
-.luna-cpf-inline-btn:hover { opacity: 0.7 !important; }
-
-.luna-cpf-gallery-panel { width: 100% !important; display: flex !important; align-items: center !important; }
-.luna-cpf-matrix {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  gap: 16px !important;
-  width: 100% !important;
-  justify-content: flex-start !important;
-  align-items: flex-start !important;
-}
-.luna-cpf-item {
-  flex: 1 1 0% !important;
-  min-width: 0 !important;
-  max-width: calc(33.333% - 11px) !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-.luna-cpf-anchor {
-  text-decoration: none !important;
-  color: #333333 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-}
-.luna-cpf-viewport {
-  width: 100% !important;
-  aspect-ratio: 3 / 4 !important;
-  overflow: hidden !important;
-  border: 1px solid #D5D2CC !important;
-  background-color: #FAFAF8 !important;
-  position: relative !important;
-  margin-bottom: 8px !important;
-}
-.luna-cpf-viewport img, .luna-cpf-empty svg {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  display: block !important;
-  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1) !important;
-}
-.luna-cpf-empty svg { fill: #fafafa !important; background-color: #fcfcfc !important; }
-.luna-cpf-anchor:hover .luna-cpf-viewport img { transform: scale(1.03) !important; }
-.luna-cpf-badge {
-  position: absolute !important;
-  left: 8px !important;
-  top: 8px !important;
-  background: #FAFAF8 !important;
-  color: #5C181E !important;
-  font-family: 'Jost', sans-serif !important;
-  font-size: 8px !important;
-  font-weight: 500 !important;
-  letter-spacing: 1.5px !important;
-  padding: 4px 7px !important;
-}
-.luna-cpf-meta-lines {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  width: 100% !important;
-  padding: 4px 0 0 0 !important;
-}
-.luna-cpf-title {
-  font-family: 'Jost', sans-serif !important;
-  font-size: 9px !important;
-  font-weight: 400 !important;
-  letter-spacing: 1px !important;
-  color: #333333 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: 75% !important;
-}
-.luna-cpf-price {
-  font-family: 'Jost', sans-serif !important;
-  font-size: 9px !important;
-  font-weight: 500 !important;
-  color: #333333 !important;
-  letter-spacing: 0.5px !important;
-  white-space: nowrap !important;
-}
-.luna-cpf-note {
-  display: block !important;
-  font-family: 'Jost', sans-serif !important;
-  font-size: 9px !important;
-  font-weight: 400 !important;
-  line-height: 1.5 !important;
-  color: #666666 !important;
-  margin-top: 3px !important;
-}
-
-@media (max-width: 768px) {
-  .luna-cpf-section { padding: 50px 0 50px 20px !important; }
-  .luna-cpf-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
-  .luna-cpf-gallery-panel { min-width: 0 !important; }
-  .luna-cpf-text-panel { justify-content: flex-start !important; text-align: left !important; padding-right: 20px !important; }
-  .luna-cpf-item { max-width: 100% !important; }
-  .luna-cpf-matrix { overflow-x: auto !important; scrollbar-width: none !important; -webkit-overflow-scrolling: touch !important; padding-right: 20px !important; }
-  .luna-cpf-matrix::-webkit-scrollbar { display: none !important; }
-  .luna-cpf-item { flex: 0 0 175px !important; width: 175px !important; }
-}
-{% endstyle %}
+</section>
 
 {% schema %}
 {
   "name": "Luna Custom Planners",
-  "max_blocks": 3,
+  "tag": "div",
   "settings": [
-    { "type": "text", "id": "micro_tag", "label": "Micro tagline", "default": "MADE TO ORDER" },
-    { "type": "text", "id": "heading_text", "label": "Heading", "default": "CUSTOM PLANNERS, NOW OPEN" },
-    { "type": "textarea", "id": "desc_text", "label": "Description", "default": "Tell me how you plan, and I'll design your planner around it: your pages, your layout, your colors, tabless or tabbed. For yourself, or to sell and share with your clients." },
-    { "type": "text", "id": "btn_label", "label": "Link text", "default": "DESIGN YOUR PLANNER" },
-    { "type": "text", "id": "btn_link", "label": "Link", "default": "/pages/custom-planners" }
-  ],
-  "blocks": [
     {
-      "type": "option",
-      "name": "Planner card",
-      "settings": [
-        { "type": "image_picker", "id": "image", "label": "Image" },
-        { "type": "text", "id": "badge", "label": "Badge (optional)" },
-        { "type": "text", "id": "title", "label": "Title", "default": "Personal planner" },
-        { "type": "text", "id": "price", "label": "Price text", "default": "From $30" },
-        { "type": "text", "id": "note", "label": "Short line (optional)" },
-        { "type": "text", "id": "link", "label": "Link", "default": "/pages/custom-planners" }
+      "type": "header",
+      "content": "Photo"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Photo"
+    },
+    {
+      "type": "select",
+      "id": "image_side",
+      "label": "Photo side",
+      "default": "left",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
       ]
+    },
+    {
+      "type": "text",
+      "id": "tag_bold",
+      "label": "Photo tag",
+      "default": "Now open"
+    },
+    {
+      "type": "text",
+      "id": "tag_text",
+      "label": "Photo tag, second part (optional)",
+      "default": ""
+    },
+    {
+      "type": "header",
+      "content": "Text"
+    },
+    {
+      "type": "text",
+      "id": "micro_tag",
+      "label": "Micro tagline (after //)",
+      "default": "MADE TO ORDER"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "CUSTOM PLANNERS, NOW OPEN"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Paragraph",
+      "default": "Tell me how you plan, and I'll design your planner around it: your pages, your layout, your colors, tabless or tabbed."
+    },
+    {
+      "type": "header",
+      "content": "Personal"
+    },
+    {
+      "type": "text",
+      "id": "opt1_title",
+      "label": "Label",
+      "default": "Personal"
+    },
+    {
+      "type": "text",
+      "id": "opt1_text",
+      "label": "Description",
+      "default": "For you, or a gift for someone you love."
+    },
+    {
+      "type": "text",
+      "id": "opt1_price",
+      "label": "Starting price",
+      "default": "$30"
+    },
+    {
+      "type": "text",
+      "id": "opt1_link",
+      "label": "Link",
+      "default": "/pages/custom-planners"
+    },
+    {
+      "type": "header",
+      "content": "Commercial"
+    },
+    {
+      "type": "text",
+      "id": "opt2_title",
+      "label": "Label",
+      "default": "Commercial"
+    },
+    {
+      "type": "text",
+      "id": "opt2_text",
+      "label": "Description",
+      "default": "Designed exclusively for you to sell or share with clients."
+    },
+    {
+      "type": "text",
+      "id": "opt2_price",
+      "label": "Starting price",
+      "default": "$60"
+    },
+    {
+      "type": "text",
+      "id": "opt2_link",
+      "label": "Link",
+      "default": "/pages/custom-planners"
+    },
+    {
+      "type": "header",
+      "content": "Buttons"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label",
+      "default": "DESIGN YOUR PLANNER"
+    },
+    {
+      "type": "text",
+      "id": "button_link",
+      "label": "Button link",
+      "default": "/pages/custom-planners"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "Second link label",
+      "default": "ASK ABOUT A CUSTOM QUOTE"
+    },
+    {
+      "type": "text",
+      "id": "link_url",
+      "label": "Second link",
+      "default": "/pages/contact"
     }
   ],
   "presets": [
     {
-      "name": "Luna Custom Planners",
-      "blocks": [
-        { "type": "option", "settings": { "title": "Personal planner", "price": "From $30", "note": "For you, or a gift." } },
-        { "type": "option", "settings": { "title": "Commercial planner", "price": "From $60", "note": "Yours to sell or share with clients." } },
-        { "type": "option", "settings": { "title": "Fully custom", "price": "Quote", "note": "Something beyond the tiers? Ask me.", "link": "/pages/contact" } }
-      ]
+      "name": "Luna Custom Planners"
     }
   ]
 }
