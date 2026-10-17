@@ -1460,3 +1460,4 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .qinline-link { padding-left: 6px; color: #6c6862; }
 .thread--on .avatar--dark { background: var(--charcoal); color: var(--white); }
 .thread--on .avatar--ox { background: var(--oxblood); color: var(--white); }
+.qinline-actions { display: flex; align-items: center; gap: 14px; padding-left: 4px; }

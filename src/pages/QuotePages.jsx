@@ -464,6 +464,8 @@ export function QuoteThread({ admin = false, quoteId, embedded = false, headExtr
 export function QuoteInline({ quoteId, admin = false }) {
   const [quote, setQuote] = useState(null);
   const [declining, setDeclining] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [closing, setClosing] = useState(false);
   const load = useCallback(async () => {
     const { data } = await supabase.from('quotes').select('*').eq('id', quoteId).maybeSingle();
     setQuote(data);
@@ -482,7 +484,40 @@ export function QuoteInline({ quoteId, admin = false }) {
     <div className="qinline">
       <QuoteCard quote={quote} admin={admin} onDecline={admin ? undefined : () => setDeclining(true)} />
       {admin && ['open', 'quoted'].includes(quote.status) && (
-        <Link to={`/messages/q/${quote.id}`} className="qinline-link small"><u>Update or close this quote</u></Link>
+        <div className="qinline-actions">
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditing(true)}>Update quote</button>
+          <button
+            type="button"
+            className="link-btn small"
+            disabled={closing}
+            onClick={async () => {
+              if (!window.confirm('Withdraw this quote? The checkout link stops working and the customer sees it’s no longer available.')) return;
+              setClosing(true);
+              const { data, error: err } = await supabase.functions.invoke('portal-quote', { body: { action: 'close', quote_id: quote.id } });
+              setClosing(false);
+              if (err || data?.error) window.alert(data?.error || errorText(err));
+              load();
+              refreshAll();
+            }}
+          >
+            {closing ? 'Withdrawing…' : 'Withdraw quote'}
+          </button>
+        </div>
+      )}
+      {editing && (
+        <div className="sheet" role="dialog" aria-label="Update this quote" onClick={() => setEditing(false)}>
+          <div className="sheet-card" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <div>
+                <p className="label ox">Update quote</p>
+                <p className="sheet-title">Change the price or what’s included</p>
+                <p className="small muted">They’ll get a “quote updated” notification, and the old checkout link stops working.</p>
+              </div>
+              <button type="button" className="ibtn" onClick={() => setEditing(false)} aria-label="Close"><Icon name="close" size={16} /></button>
+            </div>
+            <SendQuote quote={quote} onDone={() => { setEditing(false); load(); }} />
+          </div>
+        </div>
       )}
       {declining && (
         <div className="sheet" role="dialog" aria-label="Decline this quote" onClick={() => setDeclining(false)}>
