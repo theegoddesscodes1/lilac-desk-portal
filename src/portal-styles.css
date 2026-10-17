@@ -1647,3 +1647,28 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .guide-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
 .guide-head .label { margin: 0; }
 .guide-head .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- Real logo ---------- */
+.side-wm, .ptop-wm, .signin-wm { letter-spacing: 0; line-height: 0; display: inline-block; }
+.side-wm img, .ptop-wm img, .signin-wm img { display: block; height: auto; }
+.side-wm img { width: 108px; }
+.ptop-wm img { width: 88px; }
+.signin-wm img { width: 112px; }
+.signin-wm--phone img { width: 96px; }
+.signin-wm.signin-wm--phone { display: none; }
+@media (max-width: 899px) { .signin-wm.signin-wm--phone { display: block; } }
+
+/* Sign-in: the oxblood panel is the brand; the logo sits centered on it */
+.signin-art::before, .signin-art::after { display: none; }
+.signin-art { justify-content: center; align-items: center; text-align: center; padding: 48px clamp(32px, 5vw, 72px); }
+.signin-brand { display: flex; flex-direction: column; align-items: center; }
+.signin-art-logo { display: block; width: 240px; height: auto; }
+.signin-tag { margin: 22px 0 0; padding-top: 18px; border-top: 1px solid rgba(250, 250, 248, 0.35); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--lilac); }
+.signin-foot { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; }
+.signin-logo { display: none; }
+.signin .signin-go:disabled { opacity: 1; background: var(--charcoal); border-color: var(--charcoal); color: var(--white); cursor: default; }
+@media (max-width: 899px) {
+  .signin-panel { justify-content: flex-start; padding-top: calc(16vh + env(safe-area-inset-top, 0px)); }
+  .signin-logo { display: block; width: 112px; height: auto; margin: auto auto 0; padding-top: 32px; }
+  .signin-help { margin-top: 14px; padding-top: 0; }
+}

@@ -87,21 +87,15 @@ export default function LoginPage({ notice = '' }) {
   return (
     <main className="signin">
       <aside className="signin-art" aria-hidden="true">
-        <p className="signin-wm">Lilac Desk</p>
-        <div>
-          <p className="signin-quote">Your planner, from brief to download, all in one place.</p>
-          <ol className="signin-steps">
-            <li><span>01</span>Send your brief</li>
-            <li><span>02</span>Review your proofs</li>
-            <li><span>03</span>Download your planner</li>
-          </ol>
+        <div className="signin-brand">
+          <img className="signin-art-logo" src="/logo-light.png" alt="" width="240" height="55" />
+          <p className="signin-tag">Your planner, from brief to download</p>
         </div>
         <p className="signin-foot">Custom digital planners · lilacdesk.com</p>
       </aside>
 
       <section className="signin-panel">
-        <p className="signin-wm signin-wm--phone">Lilac Desk</p>
-
+        
         <div className="signin-form">
           {!sent ? (
             <form onSubmit={send}>
@@ -140,6 +134,7 @@ export default function LoginPage({ notice = '' }) {
           {error && <p className="error">{error}</p>}
         </div>
 
+        <img className="signin-logo" src="/logo.png" alt="Lilac Desk" width="112" height="26" />
         <p className="signin-help">Trouble signing in? Email <a href="mailto:support@lilacdesk.com">support@lilacdesk.com</a></p>
       </section>
     </main>

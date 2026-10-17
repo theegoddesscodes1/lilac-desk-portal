@@ -10,7 +10,7 @@ export default function Shell({ items, sub, footer, topRight, sideTop, children 
     <div className="app">
       <aside className="side">
         <div className="side-top">
-          <Link to="/" className="side-wm">Lilac Desk</Link>
+          <Link to="/" className="side-wm" aria-label="Lilac Desk"><img src="/logo.png" alt="Lilac Desk" width="150" height="35" /></Link>
           {sideTop}
         </div>
         <p className="side-sub">{sub}</p>
@@ -28,7 +28,7 @@ export default function Shell({ items, sub, footer, topRight, sideTop, children 
       </aside>
 
       <header className="ptop">
-        <Link to="/" className="ptop-wm">Lilac Desk</Link>
+        <Link to="/" className="ptop-wm" aria-label="Lilac Desk"><img src="/logo.png" alt="Lilac Desk" width="112" height="26" /></Link>
         <div className="ptop-right">{topRight}</div>
       </header>
 
