@@ -33,7 +33,7 @@ export function RoundFiles({ round, title }) {
 }
 
 // Compact list of rounds (earlier proofs, admin files tab)
-export function RoundList({ rounds, newest = null, pinsFor }) {
+export function RoundList({ rounds, newest = null, pinsFor, checklist = false, showStatus = checklist, onStatus, onReason }) {
   const [open, setOpen] = useState(null);
   return (
     <>
@@ -54,7 +54,7 @@ export function RoundList({ rounds, newest = null, pinsFor }) {
           </div>
         ))}
       </div>
-      {open && <ProofViewer files={open.files} title={`Proof ${open.number}`} pins={pinsFor?.(open) || []} onClose={() => setOpen(null)} />}
+      {open && <ProofViewer files={open.files} title={`Proof ${open.number}`} pins={pinsFor?.(open) || []} checklist={checklist} showStatus={showStatus} onStatus={onStatus} onReason={onReason} onClose={() => setOpen(null)} />}
     </>
   );
 }

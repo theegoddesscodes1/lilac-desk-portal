@@ -34,7 +34,20 @@ export function usePins(orderId) {
     await supabase.from('proof_pins').update({ sent_at: new Date().toISOString() }).eq('order_id', orderId).eq('round', round).is('sent_at', null);
     reload();
   };
-  return { pins, add, remove, markSent, reload };
+  // Kerry's checklist: done, not changed (with a reason), or back to open
+  const setStatus = async (id, status) => {
+    const patch =
+      status === 'done' ? { done_at: new Date().toISOString(), skipped_at: null }
+      : status === 'skipped' ? { skipped_at: new Date().toISOString(), done_at: null }
+      : { done_at: null, skipped_at: null, admin_note: null };
+    setPins((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    await supabase.from('proof_pins').update(patch).eq('id', id);
+  };
+  const setReason = async (id, admin_note) => {
+    setPins((p) => p.map((x) => (x.id === id ? { ...x, admin_note } : x)));
+    await supabase.from('proof_pins').update({ admin_note }).eq('id', id);
+  };
+  return { pins, add, remove, markSent, setStatus, setReason, reload };
 }
 
 // "Page 4: make this smaller", numbered in the order they were added

@@ -28,7 +28,7 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
   const listRef = useRef(null);
   const fileInputRef = useRef(null);
   // Admin only: change requests with pinned notes get a button that opens the proof with the pins on it
-  const { pins } = usePins(viewer === 'admin' ? orderId : null);
+  const { pins, setStatus: setPinStatus, setReason: setPinReason } = usePins(viewer === 'admin' ? orderId : null);
   const [pinView, setPinView] = useState(null);
   const rounds = useMemo(() => (viewer === 'admin' ? proofRounds(files ?? [], messages) : []), [viewer, files, messages]);
   const roundFor = (m) => rounds.find((r) => r.verdict?.id === m.id) || rounds.find((r) => r.verdict && r.verdict.at === m.created_at);
@@ -83,7 +83,7 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
 
   return (
     <div className="chat">
-      {pinView && <ProofViewer files={pinView.files} title={`Proof ${pinView.number} · notes`} pins={pinsOn(pinView)} onClose={() => setPinView(null)} />}
+      {pinView && <ProofViewer files={pinView.files} title={`Proof ${pinView.number} · notes`} pins={pinsOn(pinView)} checklist onStatus={(p, st) => setPinStatus(p.id, st)} onReason={(p, t) => setPinReason(p.id, t)} onClose={() => setPinView(null)} />}
       <div className="chat-list" ref={listRef}>
         {shown.length === 0 && <p className="muted chat-empty">{viewer === 'admin' ? 'No messages yet. Say hello below.' : 'No messages yet. Ask anything about your planner here.'}</p>}
         {shown.map((m) => {

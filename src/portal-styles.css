@@ -1461,3 +1461,51 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .thread--on .avatar--dark { background: var(--charcoal); color: var(--white); }
 .thread--on .avatar--ox { background: var(--oxblood); color: var(--white); }
 .qinline-actions { display: flex; align-items: center; gap: 14px; padding-left: 4px; }
+
+/* ---------- v25: notes checklist beside the proof ---------- */
+.pv-main { flex: 1; min-height: 0; display: flex; }
+.pv-main .pv-body { flex: 1; min-width: 0; }
+.pv-list { width: 330px; flex: none; background: #1f1d1d; border-left: 1px solid #3a3737; display: flex; flex-direction: column; overflow-y: auto; }
+.pv-list-head { display: flex; justify-content: space-between; align-items: baseline; padding: 18px 18px 10px; }
+.pv-list-title { margin: 0; font-family: var(--serif); font-size: 20px; color: var(--white); }
+.pv-list-head span { font-size: 12px; color: #a9a49d; }
+.pv-list-bar { height: 3px; margin: 0 18px 8px; background: #3a3737; border-radius: 3px; overflow: hidden; }
+.pv-list-bar i { display: block; height: 100%; background: var(--lilac); transition: width 0.2s; }
+.pv-list ol { list-style: none; margin: 0; padding: 4px 10px; display: grid; gap: 4px; }
+.pv-list li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 8px; border-radius: 14px; }
+.pv-list li.on, .pv-list li:hover { background: #2b2929; }
+.pv-li-main { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.pv-check { flex: none; width: 22px; height: 22px; margin-top: 2px; border-radius: 50%; border: 1.5px solid #8a867f; background: none; color: var(--charcoal); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.pv-list li.done .pv-check { background: var(--lilac); border-color: var(--lilac); }
+.pv-item { display: flex; gap: 10px; align-items: flex-start; background: none; border: 0; padding: 0; text-align: left; color: #f2efeb; font: inherit; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.pv-num { flex: none; width: 22px; height: 22px; border-radius: 50% 50% 50% 4px; background: var(--oxblood); color: #fff; font-size: 11.5px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.pv-text { min-width: 0; }
+.pv-text small { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #a9a49d; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-list li.done .pv-text > span, .pv-list li.skipped .pv-text > span { color: #8a867f; }
+.pv-list li.done .pv-text > span { text-decoration: line-through; text-decoration-color: #6c6862; }
+.pv-list li.done .pv-num, .pv-list li.skipped .pv-num { background: #5a5656; }
+.pv-skip-btn { justify-self: start; margin-left: 32px; background: none; border: 0; padding: 0; color: #a9a49d; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.pv-skip { margin: 0 0 0 32px; font-size: 12.5px; color: #d9d5cf; line-height: 1.45; }
+.pv-skip b { font-weight: 500; color: var(--lilac); }
+.pv-skip button, .pv-reason button { background: none; border: 0; padding: 0 0 0 8px; color: #a9a49d; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.pv-reason { margin-left: 32px; display: grid; gap: 6px; }
+.pv-reason textarea { border: 1px solid #5a5656; background: #2b2929; color: #f2efeb; border-radius: 12px; padding: 8px 12px; font: inherit; font-size: 13.5px; resize: none; min-height: 40px; }
+.pv-reason button.pv-reason-save { padding: 0; color: var(--lilac); }
+.pv-list-foot { margin: auto 0 0; padding: 14px 18px; font-size: 12px; color: #8a867f; line-height: 1.45; }
+.pin--done { background: #8a867f; font-size: 13px; }
+.pin--skipped { background: #6c6862; }
+.pin--flash { box-shadow: 0 0 0 6px rgba(214, 208, 222, 0.65), 0 4px 12px rgba(0, 0, 0, 0.35); }
+@media (max-width: 899px) { .pv-list { display: none; } }
+
+/* customer: what happened to their notes */
+.prev-notes { margin: 18px 0 6px; padding: 16px 18px; border: 1px solid var(--greige); border-radius: 18px; background: #fff; }
+.prev-notes-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.prev-notes-head p { margin: 0; font-family: var(--serif); font-size: 18px; }
+.prev-notes-head span { font-size: 12.5px; color: #8a867f; }
+.prev-notes ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.prev-notes li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; }
+.pn-mark { flex: none; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-top: 1px; background: #EEEBE7; color: #6c6862; }
+.pn-mark--done { background: var(--lilac); color: var(--charcoal); }
+.pn-body small { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #8a867f; }
+.pn-reason { display: block; margin-top: 3px; font-size: 13px; color: var(--oxblood); }
+.prev-notes .link-btn { margin-top: 10px; }

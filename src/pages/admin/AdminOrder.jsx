@@ -103,7 +103,8 @@ export default function AdminOrder() {
   const [viewing, setViewing] = useState(null);
   const [allActivity, setAllActivity] = useState(false);
   const [reminders, setReminders] = useState([]);
-  const { pins } = usePins(id);
+  const { pins, setStatus: setPinStatus, setReason: setPinReason } = usePins(id);
+  const pinProps = { checklist: true, onStatus: (p, st) => setPinStatus(p.id, st), onReason: (p, t) => setPinReason(p.id, t) };
   // You see notes once they're sent with a change request (drafts stay private to the customer)
   const pinsFor = (r) => pins.filter((p) => p.sent_at && p.round === r.number && r.files.some((f) => f.id === p.file_id));
   useEffect(() => {
@@ -311,7 +312,7 @@ export default function AdminOrder() {
           {tab === 'files' && (
             <div className="tab-body">
               <h3 className="h-sub">Proofs</h3>
-              {rounds.length ? <RoundList rounds={rounds} pinsFor={pinsFor} /> : <p className="muted">No proofs yet.</p>}
+              {rounds.length ? <RoundList rounds={rounds} pinsFor={pinsFor} {...pinProps} /> : <p className="muted">No proofs yet.</p>}
               <h3 className="h-sub">Final files</h3>
               <FileList files={byKind('final', 'source')} empty="No final files yet." />
               <h3 className="h-sub">From the customer</h3>
@@ -355,7 +356,7 @@ export default function AdminOrder() {
         <aside className="order-aside hide-phone">{paybox}</aside>
       </div>
 
-      {viewing && <ProofViewer files={viewing.files} title={`Proof ${viewing.number}`} pins={pinsFor(viewing)} onClose={() => setViewing(null)} />}
+      {viewing && <ProofViewer files={viewing.files} title={`Proof ${viewing.number}`} pins={pinsFor(viewing)} {...pinProps} onClose={() => setViewing(null)} />}
     </main>
   );
 }

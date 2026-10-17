@@ -317,6 +317,10 @@ export function CustomerProofs() {
   const rounds = proofRounds(files, messages);
   const pinsFor = (r) => pins.filter((p) => p.round === r.number && r.files.some((f) => f.id === p.file_id));
   const draftPins = rounds[0] ? pinsFor(rounds[0]).filter((p) => !p.sent_at) : [];
+  // Their notes on the round before this one, with what Kerry did (shown once the new proof is out)
+  const prevRound = rounds[1] || null;
+  const prevNotes = prevRound ? pinsFor(prevRound).filter((p) => p.sent_at) : [];
+  const [showPrev, setShowPrev] = [viewing === 'prev', (on) => setViewing(on ? 'prev' : false)];
   const [latest, ...earlier] = rounds;
   const waiting = order.stage === 'proof_ready';
   const approved = latest && (latest.verdict?.kind === 'approval' || (!waiting && ['approved', 'delivered', 'complete'].includes(order.stage)));
@@ -377,6 +381,27 @@ export function CustomerProofs() {
               <p className="label ox">Waiting for you</p>
               <p className="proof-ask-title">Proof {latest.number} is ready to review.</p>
               <p className="muted small">Open it, check dates and spelling, then approve it or send one list of changes. Tap right on the proof to pin a note where you want something changed.</p>
+              {prevNotes.length > 0 && (
+                <div className="prev-notes">
+                  <div className="prev-notes-head">
+                    <p>Your notes from proof {prevRound.number}</p>
+                    <span>{prevNotes.filter((p) => p.done_at).length} of {prevNotes.length} done</span>
+                  </div>
+                  <ol>
+                    {prevNotes.map((p, i) => (
+                      <li key={p.id}>
+                        <span className={`pn-mark${p.done_at ? ' pn-mark--done' : ''}`}>{p.done_at ? '✓' : i + 1}</span>
+                        <span className="pn-body">
+                          <small>Page {p.page}{p.done_at ? ' · done' : p.skipped_at ? ' · not changed' : ''}</small>
+                          {p.body}
+                          {p.skipped_at && p.admin_note && <span className="pn-reason">{p.admin_note}</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  <button type="button" className="link-btn small" onClick={() => setShowPrev(true)}>See them on proof {prevRound.number}</button>
+                </div>
+              )}
               <button type="button" className="proof-open" onClick={() => setViewing(true)}>
                 <Icon name="proof" size={18} />
                 <span><b>Open proof {latest.number}</b><small>{draftPins.length ? `${draftPins.length} ${draftPins.length === 1 ? 'note' : 'notes'} pinned so far` : `${latest.files.length} ${latest.files.length === 1 ? 'file' : 'files'} · tap to view and add notes`}</small></span>
@@ -429,8 +454,9 @@ export function CustomerProofs() {
           {changes && <p className="proof-note">You asked for changes on {formatDate(latest.verdict.at)}. Your next proof will show up here.</p>}
 
           <p className="label muted section-gap-sm">All proofs</p>
-          <RoundList rounds={rounds} newest={waiting ? latest.number : null} pinsFor={(r) => pinsFor(r).filter((p) => p.sent_at)} />
-          {viewing && (
+          <RoundList rounds={rounds} newest={waiting ? latest.number : null} pinsFor={(r) => pinsFor(r).filter((p) => p.sent_at)} showStatus />
+          {showPrev && <ProofViewer files={prevRound.files} title={`Proof ${prevRound.number} · your notes`} pins={prevNotes} showStatus onClose={() => setShowPrev(false)} />}
+          {viewing === true && (
             <ProofViewer
               files={latest.files}
               title={`Proof ${latest.number}`}

@@ -4,7 +4,7 @@ import AutoGrow from './AutoGrow';
 import Icon from './Icons';
 
 // One page with its pins on top. In pin mode, a tap anywhere on the page starts a new note there.
-function PageFrame({ pageNo, children, pins, numberOf, pinning, onTap, onOpenPin, pending }) {
+function PageFrame({ pageNo, children, pins, numberOf, pinning, onTap, onOpenPin, pending, showStatus, flash }) {
   const ref = useRef(null);
   return (
     <div
@@ -21,7 +21,7 @@ function PageFrame({ pageNo, children, pins, numberOf, pinning, onTap, onOpenPin
         <button
           key={p.id}
           type="button"
-          className="pin"
+          className={`pin${showStatus && p.done_at ? ' pin--done' : ''}${showStatus && p.skipped_at ? ' pin--skipped' : ''}${flash === p.id ? ' pin--flash' : ''}`}
           style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
           onClick={(e) => {
             e.stopPropagation();
@@ -29,7 +29,7 @@ function PageFrame({ pageNo, children, pins, numberOf, pinning, onTap, onOpenPin
           }}
           aria-label={`Note ${numberOf(p)}`}
         >
-          {numberOf(p)}
+          {showStatus && p.done_at ? '✓' : numberOf(p)}
         </button>
       ))}
       {pending && pending.page === pageNo && <span className="pin pin--new" style={{ left: `${pending.x * 100}%`, top: `${pending.y * 100}%` }}>+</span>}
@@ -104,7 +104,12 @@ function PdfPages({ url, frame }) {
 
 // Full-screen viewer for a set of files (one proof round). Download is always one tap away.
 // With pins: shows the notes pinned on this round; with pinning on, the customer can tap to add notes.
-export default function ProofViewer({ files, title, startIndex = null, onClose, pins = [], pinning = false, onAddPin, onRemovePin }) {
+// checklist: Kerry's notes panel (iPad and desktop) with onStatus(pin, 'done'|'skipped'|'open') and onReason(pin, text).
+// showStatus: show done / not-changed on the pins (always for Kerry; for customers once the next proof is out).
+export default function ProofViewer({ files, title, startIndex = null, onClose, pins = [], pinning = false, onAddPin, onRemovePin, checklist = false, showStatus = checklist, onStatus, onReason }) {
+  const [flash, setFlash] = useState(null);
+  const [reasonFor, setReasonFor] = useState(null);
+  const [reasonText, setReasonText] = useState('');
   // Open on the first file that has notes, unless a file was picked
   const [index, setIndex] = useState(() => startIndex ?? Math.max(0, files.findIndex((f) => pins.some((p) => p.file_id === f.id))));
   const [url, setUrl] = useState('');
@@ -189,6 +194,8 @@ export default function ProofViewer({ files, title, startIndex = null, onClose, 
       numberOf={numberOf}
       pinning={pinning && mode}
       pending={pending}
+      showStatus={showStatus}
+      flash={flash}
       onTap={(page, x, y) => {
         hideTip();
         setOpenPin(null);
@@ -236,6 +243,7 @@ export default function ProofViewer({ files, title, startIndex = null, onClose, 
         </div>
       )}
 
+      <div className="pv-main">
       <div className="pv-body">
         {failed && <p className="pv-note">This file couldn't be loaded. Try Download.</p>}
         {url && isPdf(file) && <PdfPages key={url} url={url} frame={frame} />}
@@ -243,6 +251,75 @@ export default function ProofViewer({ files, title, startIndex = null, onClose, 
         {url && !isPdf(file) && !isImage(file) && (
           <p className="pv-note">This type of file can't be shown here. Use Download to open it.</p>
         )}
+      </div>
+      {checklist && pins.length > 0 && (
+        <aside className="pv-list" aria-label="Notes checklist">
+          <div className="pv-list-head">
+            <p className="pv-list-title">Notes</p>
+            <span>{pins.filter((p) => p.done_at || p.skipped_at).length} of {pins.length} handled</span>
+          </div>
+          <div className="pv-list-bar"><i style={{ width: `${(pins.filter((p) => p.done_at || p.skipped_at).length / pins.length) * 100}%` }} /></div>
+          <ol>
+            {pins.map((p) => {
+              const state = p.done_at ? 'done' : p.skipped_at ? 'skipped' : '';
+              return (
+                <li key={p.id} className={`${state}${openPin?.id === p.id || flash === p.id ? ' on' : ''}`}>
+                  <button type="button" className="pv-check" aria-label={p.done_at ? 'Mark not done' : 'Mark done'} title={p.done_at ? 'Mark not done' : 'Mark done'} onClick={() => onStatus?.(p, p.done_at ? 'open' : 'done')}>
+                    {p.done_at ? '✓' : ''}
+                  </button>
+                  <div className="pv-li-main">
+                    <button
+                      type="button"
+                      className="pv-item"
+                      onClick={() => {
+                        const i = files.findIndex((f) => f.id === p.file_id);
+                        if (i >= 0 && i !== index) setIndex(i);
+                        setFlash(p.id);
+                        setTimeout(() => document.querySelector('.pin--flash')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), i !== index ? 900 : 60);
+                        setTimeout(() => setFlash(null), 2200);
+                      }}
+                    >
+                      <span className="pv-num">{numberOf(p)}</span>
+                      <span className="pv-text">
+                        <small>Page {p.page}{files.length > 1 ? ` · ${(files.find((f) => f.id === p.file_id)?.name || '').replace(/\.pdf$/i, '')}` : ''}</small>
+                        <span>{p.body}</span>
+                      </span>
+                    </button>
+                    {p.skipped_at && reasonFor !== p.id && (
+                      <p className="pv-skip">
+                        <b>Not changed</b>{p.admin_note ? `: ${p.admin_note}` : ''}{' '}
+                        <button type="button" onClick={() => { setReasonFor(p.id); setReasonText(p.admin_note || ''); }}>Edit</button>
+                        <button type="button" onClick={() => onStatus?.(p, 'open')}>Undo</button>
+                      </p>
+                    )}
+                    {!p.done_at && !p.skipped_at && reasonFor !== p.id && (
+                      <button type="button" className="pv-skip-btn" onClick={() => { setReasonFor(p.id); setReasonText(''); }}>Didn’t change this</button>
+                    )}
+                    {reasonFor === p.id && (
+                      <form
+                        className="pv-reason"
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!p.skipped_at) await onStatus?.(p, 'skipped');
+                          await onReason?.(p, reasonText.trim());
+                          setReasonFor(null);
+                        }}
+                      >
+                        <AutoGrow autoFocus value={reasonText} onChange={(e) => setReasonText(e.target.value)} placeholder="Why, in a line (they’ll see this with the next proof)" maxHeight={120} />
+                        <div>
+                          <button type="submit" className="pv-reason-save">Save</button>
+                          <button type="button" onClick={() => setReasonFor(null)}>Cancel</button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="pv-list-foot">Customers see what’s done, and your reasons, when you send the next proof.</p>
+        </aside>
+      )}
       </div>
 
       {tip && pinning && mode && !pending && !openPin && (
