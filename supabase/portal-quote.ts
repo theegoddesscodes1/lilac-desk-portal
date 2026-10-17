@@ -169,12 +169,14 @@ Deno.serve(async (req) => {
   const { data: isAdmin } = await user.rpc("is_admin");
   const service = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
   const name = quote.name || quote.email;
-  const link = `${PORTAL_URL}/quotes/${quote.id}`;
+  // A quote sent from an order chat lives in that chat; anything else has its own page
+  const chatPath = quote.request?.order_id ? `/orders/${quote.request.order_id}/messages` : `/quotes/${quote.id}`;
+  const link = `${PORTAL_URL}${chatPath}`;
   console.log(`portal-quote: ${body.action} ${body.event ?? ""} by ${who.user.email}`);
 
   if (body.action === "notify") {
     if (isAdmin) {
-      await push("customer", quote.email, "New message from Kerry", "About your custom planner. Tap to read.", `/quotes/${quote.id}`);
+      await push("customer", quote.email, "New message from Kerry", "About your custom planner. Tap to read.", chatPath);
       await sendEmail([quote.email], "New message about your custom planner", emailLayout("You have a new message", "<p>Kerry replied about your custom planner request.</p>", "Read and reply", link));
     } else {
       const isNew = body.event === "request";
@@ -212,7 +214,7 @@ Deno.serve(async (req) => {
       .eq("id", quote.id);
     await service.from("quote_messages").insert({ quote_id: quote.id, sender: "admin", kind: "quote", body: scope });
 
-    await push("customer", quote.email, quote.status === "quoted" ? "Your quote was updated" : "Your quote is ready", `$${price.toFixed(2)} · tap to review and pay.`, `/quotes/${quote.id}`);
+    await push("customer", quote.email, quote.status === "quoted" ? "Your quote was updated" : "Your quote is ready", `$${price.toFixed(2)} · tap to review and pay.`, chatPath);
     await sendEmail(
       [quote.email],
       quote.status === "quoted" ? "Your updated custom planner quote" : "Your custom planner quote",

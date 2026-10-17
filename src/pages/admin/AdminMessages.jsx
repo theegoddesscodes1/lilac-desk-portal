@@ -23,7 +23,7 @@ const FILTERS = [
 const LIVE = ['delivered', 'complete', 'closed'];
 
 // Sent into the order chat so the customer knows where to find a quote you send from here
-const QUOTE_NOTE = 'I’ve sent you a quote for a new custom planner. You’ll find it on your Home page, with a button to review and pay.';
+const QUOTE_NOTE = 'I’ve sent you a quote for a new custom planner.';
 
 // One customer, all their orders: chips switch between each order's messages
 function Conversation({ orderId }) {
@@ -47,7 +47,7 @@ function Conversation({ orderId }) {
         email: order.customer_email.toLowerCase(),
         name: order.customer_name,
         license,
-        request: { idea: `Quote from the chat about ${order.shopify_order_name}`, from: 'chat', order: order.shopify_order_name },
+        request: { idea: `Quote from the chat about ${order.shopify_order_name}`, from: 'chat', order: order.shopify_order_name, order_id: order.id },
       })
       .select('id')
       .single();
@@ -55,7 +55,9 @@ function Conversation({ orderId }) {
     return data.id;
   }
   async function quoteSent(quoteId) {
-    await supabase.from('messages').insert({ order_id: order.id, sender: 'admin', body: QUOTE_NOTE });
+    // The quote card itself goes into this chat (falls back to a plain note if the database update isn't in yet)
+    const { error: cardErr } = await supabase.from('messages').insert({ order_id: order.id, sender: 'admin', kind: 'quote', quote_id: quoteId, body: QUOTE_NOTE });
+    if (cardErr) await supabase.from('messages').insert({ order_id: order.id, sender: 'admin', body: QUOTE_NOTE });
     setQuoting(false);
     setSentQuote(quoteId);
   }
@@ -134,7 +136,7 @@ export default function AdminMessages() {
     () =>
       [
         ...customerThreads,
-        ...quoteThreads.map((t) => ({ ...t, type: 'quote' })),
+        ...quoteThreads.filter((t) => t.quote.request?.from !== 'chat' || t.unread > 0).map((t) => ({ ...t, type: 'quote' })),
         ...contactThreads.filter((t) => !t.contact.quote_id).map((t) => ({ ...t, type: 'contact' })),
       ].sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt)),
     [customerThreads, quoteThreads, contactThreads]

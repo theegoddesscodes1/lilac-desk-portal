@@ -1454,3 +1454,9 @@ button.ocl-row:hover .ocl-name { color: var(--oxblood); }
 .msg-pins { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 7px 14px; border: 1px solid var(--oxblood); border-radius: 999px; background: #fff; color: var(--oxblood); font: inherit; font-size: 13px; cursor: pointer; }
 .msg-pins:hover { background: var(--oxblood); color: var(--white); }
 .crash { padding-top: 60px; }
+/* quote card inside an order chat */
+.qinline { align-self: flex-start; width: 100%; max-width: 560px; display: grid; gap: 6px; }
+.qinline .qcard-quote { margin: 0; }
+.qinline-link { padding-left: 6px; color: #6c6862; }
+.thread--on .avatar--dark { background: var(--charcoal); color: var(--white); }
+.thread--on .avatar--ox { background: var(--oxblood); color: var(--white); }

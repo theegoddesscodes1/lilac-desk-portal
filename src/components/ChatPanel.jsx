@@ -4,6 +4,7 @@ import { DESIGNER_NAME } from '../portal-config';
 import { errorText, formatDate, notify, proofRounds, refreshAll, uploadOrderFile } from '../lib/orderApi';
 import { usePins } from '../lib/proofPins';
 import ProofViewer from './ProofViewer';
+import { QuoteInline } from '../pages/QuotePages';
 import { ChatImage, FileChip, isImage } from './FilePreview';
 import AutoGrow from './AutoGrow';
 import Icon from './Icons';
@@ -88,6 +89,9 @@ export default function ChatPanel({ orderId, messages, files, viewer, customerNa
         {shown.map((m) => {
           if (m.sender === 'system') {
             return <p key={m.id} className="msg-sys">{m.body}</p>;
+          }
+          if (m.kind === 'quote' && m.quote_id) {
+            return <QuoteInline key={m.id} quoteId={m.quote_id} admin={viewer === 'admin'} />;
           }
           const file = m.file_id ? filesById[m.file_id] : null;
           const photo = file && isImage(file);

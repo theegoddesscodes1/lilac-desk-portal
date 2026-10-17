@@ -173,6 +173,9 @@ export function QuoteCard({ quote, admin, compact = false, onDecline }) {
       {payable && !compact && <p className="small muted qcard-note">Questions first? Message me below.</p>}
       {quote.status === 'quoted' && admin && <p className="small muted qcard-note">Waiting for payment.</p>}
       {quote.status === 'paid' && <p className="small ox qcard-note"><Icon name="check" size={14} /> Paid {formatDate(quote.paid_at)}</p>}
+      {quote.status === 'closed' && (
+        <p className="small muted qcard-note">{quote.closed_by === 'customer' ? `${admin ? 'They' : 'You'} declined this quote${quote.close_reason ? `: ${quote.close_reason.toLowerCase()}` : ''}.` : 'This quote is no longer available.'}</p>
+      )}
     </div>
   );
 }
@@ -454,5 +457,40 @@ export function QuoteThread({ admin = false, quoteId, embedded = false, headExtr
         )}
       </div>
     </Wrapper>
+  );
+}
+
+// A quote shown inside an order chat (sent with "Send quote" from that chat). Live, so it updates when paid or declined.
+export function QuoteInline({ quoteId, admin = false }) {
+  const [quote, setQuote] = useState(null);
+  const [declining, setDeclining] = useState(false);
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('quotes').select('*').eq('id', quoteId).maybeSingle();
+    setQuote(data);
+  }, [quoteId]);
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel(`quote-inline-${quoteId}-${Math.random().toString(36).slice(2, 8)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes', filter: `id=eq.${quoteId}` }, load)
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [quoteId, load]);
+
+  if (!quote) return <p className="msg-sys">Loading quote…</p>;
+  return (
+    <div className="qinline">
+      <QuoteCard quote={quote} admin={admin} onDecline={admin ? undefined : () => setDeclining(true)} />
+      {admin && ['open', 'quoted'].includes(quote.status) && (
+        <Link to={`/messages/q/${quote.id}`} className="qinline-link small"><u>Update or close this quote</u></Link>
+      )}
+      {declining && (
+        <div className="sheet" role="dialog" aria-label="Decline this quote" onClick={() => setDeclining(false)}>
+          <div className="sheet-card" onClick={(e) => e.stopPropagation()}>
+            <DeclinePanel quote={quote} onDone={() => { setDeclining(false); load(); }} onCancel={() => setDeclining(false)} />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
